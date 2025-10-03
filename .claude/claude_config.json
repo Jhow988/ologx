@@ -1,0 +1,8 @@
+{
+  "model": "claude-sonnet-4-5",
+  "hooks": {},
+  "statusLine": {
+    "enabled": true
+  },
+  "outputStyles": {}
+}
