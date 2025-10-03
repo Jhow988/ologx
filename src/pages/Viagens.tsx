@@ -31,14 +31,20 @@ const Viagens: React.FC = () => {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name')
+      .select('id, full_name, role, status')
       .eq('company_id', user.companyId)
-      .eq('role', 'driver');
+      .eq('role', 'driver')
+      .eq('status', 'active');
 
     if (error) {
       console.error('Error fetching drivers:', error);
     } else {
-      const mappedDrivers = (data || []).map(d => ({ id: d.id, name: d.full_name })) as User[];
+      const mappedDrivers = (data || []).map(d => ({
+        id: d.id,
+        name: d.full_name,
+        role: d.role,
+        status: d.status
+      })) as User[];
       setDrivers(mappedDrivers);
     }
   }, [user?.companyId]);

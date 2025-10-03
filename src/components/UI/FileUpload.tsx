@@ -1,13 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { UploadCloud, FileText, X, AlertCircle, Loader } from 'lucide-react';
+import { UploadCloud, FileText, X, AlertCircle, Loader, CheckCircle } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { Attachment } from '../../types';
+import { useFileUpload } from '../../hooks/useFileUpload';
 
 interface FileUploadProps {
   files: Attachment[];
   onFilesChange: (files: Attachment[]) => void;
   maxFiles?: number;
   maxSizeMB?: number;
+  uploadToSupabase?: boolean; // Nova opção para upload direto
+  folder?: string; // Pasta no storage (ex: 'vehicles', 'maintenances')
 }
 
 const formatBytes = (bytes: number, decimals = 2) => {
@@ -24,10 +27,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
   onFilesChange,
   maxFiles = 2,
   maxSizeMB = 10,
+  uploadToSupabase = false,
+  folder = '',
 }) => {
   const [errors, setErrors] = useState<string[]>([]);
   const [compressingFiles, setCompressingFiles] = useState<Set<string>>(new Set());
   const [compressionErrorFiles, setCompressionErrorFiles] = useState<Set<string>>(new Set());
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const { uploadFile, progress: uploadProgress } = useFileUpload();
 
   useEffect(() => {
     return () => {
@@ -40,7 +47,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
     let currentErrors: string[] = [];
     let filesToProcess: { rawFile: File, attachment: Attachment }[] = [];
 
-    if (files.length + newRawFiles.length > maxFiles) {
+    // Garantir que files é sempre um array
+    const currentFiles = Array.isArray(files) ? files : [];
+
+    if (currentFiles.length + newRawFiles.length > maxFiles) {
       currentErrors.push(`Você pode anexar no máximo ${maxFiles} arquivos.`);
     } else {
       newRawFiles.forEach(file => {
@@ -69,7 +79,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     const newAttachments = filesToProcess.map(ftp => ftp.attachment);
     const newFileIdsToCompress = newAttachments.map(att => att.id);
-    onFilesChange(prevFiles => [...prevFiles, ...newAttachments]);
+    onFilesChange([...currentFiles, ...newAttachments]);
     setCompressingFiles(prev => new Set([...prev, ...newFileIdsToCompress]));
 
     const compressionPromises = filesToProcess.map(async ({ rawFile, attachment }) => {
@@ -96,12 +106,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     const results = await Promise.all(compressionPromises);
 
-    onFilesChange(currentFiles => {
-      const updatedFiles = currentFiles.map(f => {
-        const compressedVersion = results.find(ca => ca.id === f.id);
-        return compressedVersion || f;
-      });
-      return updatedFiles;
+    // Atualizar com versões compactadas
+    const updatedFiles = [...currentFiles, ...newAttachments].map(f => {
+      const compressedVersion = results.find(ca => ca.id === f.id);
+      return compressedVersion || f;
     });
 
     setCompressingFiles(prev => {
@@ -110,15 +118,68 @@ const FileUpload: React.FC<FileUploadProps> = ({
         return newSet;
     });
 
+    // Se uploadToSupabase estiver ativo, fazer upload automaticamente
+    if (uploadToSupabase) {
+      await uploadFilesToSupabase(results, updatedFiles);
+    } else {
+      onFilesChange(updatedFiles);
+    }
+
     event.target.value = '';
-  }, [files, onFilesChange, maxFiles, maxSizeMB]);
+  }, [files, onFilesChange, maxFiles, maxSizeMB, uploadToSupabase, folder]);
+
+  const uploadFilesToSupabase = async (attachments: Attachment[], allFiles: Attachment[]) => {
+    const uploadIds = attachments.map(a => a.id);
+    setUploadingFiles(prev => new Set([...prev, ...uploadIds]));
+
+    // Usar os arquivos passados como parâmetro
+    let currentFiles = [...allFiles];
+
+    for (const attachment of attachments) {
+      if (!attachment.file) {
+        setUploadingFiles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(attachment.id);
+          return newSet;
+        });
+        continue;
+      }
+
+      try {
+        const result = await uploadFile(attachment.file, {
+          folder,
+          maxSizeMB
+        });
+
+        // Atualizar o arquivo atual com os dados do upload
+        currentFiles = currentFiles.map(f =>
+          f.id === attachment.id
+            ? { ...f, url: result.url, storagePath: result.path }
+            : f
+        );
+
+        // Atualizar o estado com os arquivos atualizados
+        onFilesChange([...currentFiles]);
+      } catch (error: any) {
+        console.error(`Erro ao fazer upload de ${attachment.name}:`, error);
+        setErrors(prev => [...prev, `Erro no upload de ${attachment.name}: ${error.message}`]);
+      } finally {
+        setUploadingFiles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(attachment.id);
+          return newSet;
+        });
+      }
+    }
+  };
 
   const handleRemoveFile = (fileId: string) => {
-    const fileToRemove = files.find(file => file.id === fileId);
+    const currentFiles = Array.isArray(files) ? files : [];
+    const fileToRemove = currentFiles.find(file => file.id === fileId);
     if (fileToRemove) {
       URL.revokeObjectURL(fileToRemove.url);
     }
-    const newFiles = files.filter(file => file.id !== fileId);
+    const newFiles = currentFiles.filter(file => file.id !== fileId);
     onFilesChange(newFiles);
     setErrors([]);
     setCompressingFiles(prev => {
@@ -171,12 +232,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
         </div>
       )}
 
-      {files.length > 0 && (
+      {Array.isArray(files) && files.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Arquivos Selecionados:</h4>
           {files.map(file => {
             const isCompressing = compressingFiles.has(file.id);
+            const isUploading = uploadingFiles.has(file.id);
             const hasError = compressionErrorFiles.has(file.id);
+            const isUploaded = uploadToSupabase && file.storagePath && !isUploading;
 
             return (
               <div key={file.id} className="flex items-center justify-between p-2 bg-gray-100 dark:bg-dark-bg rounded-lg">
@@ -188,6 +251,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
                       <div className="flex items-center gap-1 text-xs text-accent">
                         <Loader className="h-3 w-3 animate-spin" />
                         <span>Compactando... ({formatBytes(file.size)})</span>
+                      </div>
+                    ) : isUploading ? (
+                      <div className="flex items-center gap-1 text-xs text-blue-600">
+                        <Loader className="h-3 w-3 animate-spin" />
+                        <span>Enviando para nuvem...</span>
+                      </div>
+                    ) : isUploaded ? (
+                      <div className="flex items-center gap-1 text-xs text-green-600">
+                        <CheckCircle className="h-3 w-3" />
+                        <span>Enviado ({formatBytes(file.size)})</span>
                       </div>
                     ) : hasError ? (
                       <div className="flex items-center gap-1 text-xs text-red-500">
@@ -203,7 +276,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   type="button"
                   onClick={() => handleRemoveFile(file.id)}
                   className="p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200 dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isCompressing}
+                  disabled={isCompressing || isUploading}
                 >
                   <X className="h-4 w-4" />
                 </button>

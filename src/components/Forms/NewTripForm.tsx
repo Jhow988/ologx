@@ -55,7 +55,7 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
     if (!selectedDate) {
       return {
         availableDrivers: users.filter(u => u.role === 'driver' && u.status === 'active'),
-        availableVehicles: vehicles.filter(v => v.status === 'active') // Exclui 'maintenance' e 'inactive'
+        availableVehicles: vehicles.filter(v => ['active', 'available'].includes(v.status)) // Aceita 'active' ou 'available'
       };
     }
 
@@ -71,7 +71,7 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
     });
 
     const drivers = users.filter(u => u.role === 'driver' && u.status === 'active' && !unavailableDriverIds.has(u.id));
-    const vehiclesList = vehicles.filter(v => v.status === 'active' && !unavailableVehicleIds.has(v.id)); // Exclui 'maintenance' e 'inactive'
+    const vehiclesList = vehicles.filter(v => ['active', 'available'].includes(v.status) && !unavailableVehicleIds.has(v.id)); // Aceita 'active' ou 'available'
 
     return { availableDrivers: drivers, availableVehicles: vehiclesList };
   }, [formData.startDate, trips, users, vehicles, initialData]);
@@ -239,9 +239,12 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
       
       <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
           <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Arquivos</label>
-          <FileUpload 
+          <FileUpload
             files={formData.attachments}
             onFilesChange={(newFiles) => setFormData(prev => ({...prev, attachments: newFiles}))}
+            uploadToSupabase={true}
+            folder="trips"
+            maxSizeMB={50}
           />
       </div>
 

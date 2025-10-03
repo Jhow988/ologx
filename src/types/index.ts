@@ -51,6 +51,7 @@ export interface Attachment {
   size: number;
   url: string;
   file?: File;
+  storagePath?: string; // Caminho no Supabase Storage
 }
 
 export interface Trip {
