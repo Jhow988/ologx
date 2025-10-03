@@ -63,8 +63,8 @@ export interface Trip {
   origin: string;
   destination: string;
   distance: number;
-  value: number;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  freight_value: number;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   startDate: string;
   endDate?: string;
   description?: string;

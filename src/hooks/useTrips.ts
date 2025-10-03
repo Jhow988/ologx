@@ -59,22 +59,32 @@ export function useTrips() {
     }
 
     try {
+      console.log('createTrip - tripData:', tripData);
+
+      const dataToInsert = {
+        ...tripData,
+        company_id: user.companyId
+      };
+
+      console.log('createTrip - dataToInsert:', dataToInsert);
+
       const { data, error } = await supabase
         .from('trips')
-        .insert([{
-          ...tripData,
-          company_id: user.companyId
-        }])
+        .insert([dataToInsert])
         .select()
         .single();
+
+      console.log('createTrip - data:', data);
+      console.log('createTrip - error:', error);
 
       if (error) throw error;
 
       toast.success('Viagem criada com sucesso!');
       await fetchTrips();
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar viagem:', error);
+      console.error('Detalhes:', error.message, error.details);
       toast.error('Erro ao criar viagem');
       return null;
     }

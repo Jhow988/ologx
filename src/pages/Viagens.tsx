@@ -67,31 +67,42 @@ const Viagens: React.FC = () => {
     endDate: t.end_date,
     origin: t.origin,
     destination: t.destination,
-    value: t.value,
+    freight_value: t.freight_value || 0,
     status: t.status,
     cte: t.cte,
     nf: t.nf,
   })) as Trip[];
 
   const handleSaveTrip = async (tripData: Partial<Trip>) => {
+    // Preparar attachments para salvar (apenas metadados, não o File object)
+    const attachmentsToSave = (tripData.attachments || []).map(att => ({
+      id: att.id,
+      name: att.name,
+      size: att.size,
+      url: att.url,
+      storagePath: att.storagePath
+    }));
+
     const dataToSave = {
       client_id: tripData.clientId,
       start_date: tripData.startDate,
-      cte: tripData.cte,
-      nf: tripData.nf,
-      requester: tripData.requester,
+      cte: tripData.cte || null,
+      nf: tripData.nf || null,
+      requester: tripData.requester || null,
       origin: tripData.origin,
       destination: tripData.destination,
-      vehicle_type: tripData.vehicleType,
+      vehicle_type: tripData.vehicleType || null,
       vehicle_id: tripData.vehicleId,
       driver_id: tripData.driverId,
-      value: tripData.value,
-      freight_type: tripData.freightType,
-      insurance_info: tripData.insuranceInfo,
-      description: tripData.description,
-      status: tripData.status,
-      attachments: tripData.attachments,
+      freight_value: tripData.freight_value || 0,
+      freight_type: tripData.freightType || null,
+      insurance_info: tripData.insuranceInfo || null,
+      description: tripData.description || null,
+      status: tripData.status || 'scheduled',
+      attachments: attachmentsToSave,
     };
+
+    console.log('Salvando viagem com dados:', dataToSave);
 
     if (modalState.type === 'edit' && modalState.trip) {
       await updateTrip(modalState.trip.id, dataToSave as any);
@@ -116,7 +127,7 @@ const Viagens: React.FC = () => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
       case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
+      case 'scheduled': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
       case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
@@ -124,7 +135,7 @@ const Viagens: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'pending': return 'Pendente';
+      case 'scheduled': return 'Agendado';
       case 'in_progress': return 'Em Andamento';
       case 'completed': return 'Concluído';
       case 'cancelled': return 'Cancelado';
@@ -133,13 +144,17 @@ const Viagens: React.FC = () => {
   };
 
   const columns = [
-    { key: 'startDate', header: 'Data', render: (date: string) => new Date(date + 'T12:00:00').toLocaleDateString('pt-BR') },
+    { key: 'startDate', header: 'Data', render: (date: string) => {
+      if (!date) return 'Sem data';
+      const dateObj = new Date(date + 'T12:00:00');
+      return isNaN(dateObj.getTime()) ? 'Data inválida' : dateObj.toLocaleDateString('pt-BR');
+    }},
     { key: 'clientName', header: 'Cliente' },
     { key: 'origin', header: 'Origem' },
     { key: 'destination', header: 'Destino' },
     { key: 'vehiclePlate', header: 'Veículo' },
     { key: 'driverName', header: 'Motorista' },
-    { key: 'value', header: 'Valor', render: (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) },
+    { key: 'freight_value', header: 'Valor', render: (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) },
     {
       key: 'status',
       header: 'Status',

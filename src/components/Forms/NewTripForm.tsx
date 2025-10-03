@@ -16,7 +16,7 @@ interface NewTripFormProps {
 
 const getStatusText = (status: string) => {
   switch (status) {
-    case 'pending': return 'Pendente';
+    case 'scheduled': return 'Agendado';
     case 'in_progress': return 'Em Andamento';
     case 'completed': return 'Concluído';
     case 'cancelled': return 'Cancelado';
@@ -36,18 +36,35 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
     vehicleType: initialData?.vehicleType || '',
     vehicleId: initialData?.vehicleId || '',
     driverId: initialData?.driverId || '',
-    value: initialData?.value || 0,
+    freight_value: initialData?.freight_value || 0,
     freightType: initialData?.freightType || '',
     insuranceInfo: initialData?.insuranceInfo || '',
     description: initialData?.description || '',
-    status: initialData?.status || 'pending',
+    status: initialData?.status || 'scheduled',
     attachments: initialData?.attachments || [],
   });
 
   const [formData, setFormData] = useState(getInitialState());
 
   useEffect(() => {
-    setFormData(getInitialState());
+    setFormData({
+      clientId: initialData?.clientId || '',
+      startDate: initialData?.startDate || new Date().toISOString().split('T')[0],
+      cte: initialData?.cte || '',
+      nf: initialData?.nf || '',
+      requester: initialData?.requester || '',
+      origin: initialData?.origin || '',
+      destination: initialData?.destination || '',
+      vehicleType: initialData?.vehicleType || '',
+      vehicleId: initialData?.vehicleId || '',
+      driverId: initialData?.driverId || '',
+      freight_value: initialData?.freight_value || 0,
+      freightType: initialData?.freightType || '',
+      insuranceInfo: initialData?.insuranceInfo || '',
+      description: initialData?.description || '',
+      status: initialData?.status || 'scheduled',
+      attachments: initialData?.attachments || [],
+    });
   }, [initialData]);
 
   const { availableDrivers, availableVehicles } = useMemo(() => {
@@ -64,7 +81,7 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
 
     trips.forEach(trip => {
       if (initialData && trip.id === initialData.id) return;
-      if (trip.startDate === selectedDate && ['pending', 'in_progress'].includes(trip.status)) {
+      if (trip.startDate === selectedDate && ['scheduled', 'in_progress'].includes(trip.status)) {
         if (trip.driverId) unavailableDriverIds.add(trip.driverId);
         if (trip.vehicleId) unavailableVehicleIds.add(trip.vehicleId);
       }
@@ -94,17 +111,17 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, '');
     if (rawValue === '') {
-      setFormData(prev => ({ ...prev, value: 0 }));
+      setFormData(prev => ({ ...prev, freight_value: 0 }));
       return;
     }
     const numberValue = Number(rawValue) / 100;
-    setFormData(prev => ({ ...prev, value: numberValue }));
+    setFormData(prev => ({ ...prev, freight_value: numberValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.startDate || !formData.clientId || !formData.value) {
-      alert('Por favor, preencha os campos obrigatórios (Data, Empresa e Valor).');
+    if (!formData.startDate || !formData.clientId || !formData.freight_value || !formData.origin || !formData.destination) {
+      alert('Por favor, preencha os campos obrigatórios (Data, Empresa, Valor, Origem e Destino).');
       return;
     }
     onSave(formData);
@@ -113,14 +130,14 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
   const getAvailableStatuses = (currentStatus?: Trip['status']): Trip['status'][] => {
     if (!currentStatus) return [];
     switch (currentStatus) {
-      case 'pending':
-        return ['pending', 'in_progress', 'cancelled'];
+      case 'scheduled':
+        return ['scheduled', 'in_progress', 'cancelled'];
       case 'in_progress':
         return ['in_progress', 'completed', 'cancelled'];
       case 'completed':
         return ['completed', 'in_progress'];
       case 'cancelled':
-        return ['cancelled', 'pending'];
+        return ['cancelled', 'scheduled'];
       default:
         return [currentStatus];
     }
@@ -155,12 +172,12 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
           <input type="text" name="requester" value={formData.requester} onChange={handleChange} placeholder="Nome do solicitante" className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Cidade de Origem</label>
-          <input type="text" name="origin" value={formData.origin} onChange={handleChange} placeholder="Cidade de origem" className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Cidade de Origem *</label>
+          <input type="text" name="origin" value={formData.origin} onChange={handleChange} placeholder="Cidade de origem" required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Cidade de Destino</label>
-          <input type="text" name="destination" value={formData.destination} onChange={handleChange} placeholder="Cidade de destino" className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Cidade de Destino *</label>
+          <input type="text" name="destination" value={formData.destination} onChange={handleChange} placeholder="Cidade de destino" required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Tipo de Veículo</label>
@@ -205,9 +222,9 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
           <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Valor *</label>
           <input 
             type="text" 
-            name="value"
+            name="freight_value"
             placeholder="R$ 0,00"
-            value={formData.value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(formData.value) : ''}
+            value={formData.freight_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(formData.freight_value) : ''}
             onChange={handleValueChange}
             required 
             className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" 
