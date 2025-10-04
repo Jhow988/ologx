@@ -27,3 +27,6 @@ npm-debug.log*
 # Temporary files
 *.tmp
 nul
+
+# SQL temporary/test files (keep organized in supabase/)
+/*.sql
