@@ -32,29 +32,67 @@
 - Melhor prática: diferentes chaves para dev/staging/prod
 - Segurança em camadas
 
-### 2. Configurar Variáveis de Ambiente no Hosting
+### 2. Configurar Variáveis de Ambiente na Vercel
 
-#### Para Vercel:
+**Opção A: Via Dashboard da Vercel (Recomendado)**
+
+```
+1. Acesse: https://vercel.com/dashboard
+2. Selecione seu projeto: ologx
+3. Settings > Environment Variables
+4. Adicionar uma por uma:
+
+   Name: VITE_SUPABASE_URL
+   Value: https://hpbnyyktoybpuickmujq.supabase.co
+   Environment: Production
+   [Add]
+
+   Name: VITE_SUPABASE_ANON_KEY
+   Value: [COLE A NOVA KEY ROTACIONADA]
+   Environment: Production
+   [Add]
+
+   Name: VITE_APP_ENV
+   Value: production
+   Environment: Production
+   [Add]
+```
+
+**Opção B: Via Vercel CLI**
+
 ```bash
-# No dashboard da Vercel ou via CLI:
+# Instalar CLI (se ainda não tiver)
+npm install -g vercel
+
+# Fazer login
+vercel login
+
+# Adicionar variáveis
 vercel env add VITE_SUPABASE_URL production
+# Cole: https://hpbnyyktoybpuickmujq.supabase.co
+
 vercel env add VITE_SUPABASE_ANON_KEY production
+# Cole: [NOVA KEY ROTACIONADA]
+
+vercel env add VITE_APP_ENV production
+# Digite: production
 ```
 
-#### Para Netlify:
-```bash
-# No dashboard: Site settings > Environment variables
-# Ou via arquivo netlify.toml:
-[build.environment]
-  VITE_SUPABASE_URL = "https://your-prod-project.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "your-prod-anon-key"
-```
+### 3. Configurar Headers de Segurança na Vercel
 
-### 3. Configurar Headers de Segurança
+Crie o arquivo `vercel.json` na raiz do projeto:
 
-#### Para Vercel (vercel.json):
 ```json
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -78,6 +116,10 @@ vercel env add VITE_SUPABASE_ANON_KEY production
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
         }
       ]
     }
@@ -85,14 +127,14 @@ vercel env add VITE_SUPABASE_ANON_KEY production
 }
 ```
 
-#### Para Netlify (_headers):
-```
-/*
-  X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
-  X-XSS-Protection: 1; mode=block
-  Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+**Depois de criar o arquivo:**
+
+```bash
+git add vercel.json
+git commit -m "feat: Adicionar configurações de segurança Vercel"
+git push origin main
+
+# Vercel fará redeploy automático
 ```
 
 ### 4. Habilitar Recursos de Segurança no Supabase
@@ -119,9 +161,17 @@ Authentication > Rate Limits:
 #### 4.3 Site URL Configuration
 ```
 Authentication > URL Configuration:
-- Site URL: https://seu-dominio.com
+
+Desenvolvimento:
+- Site URL: http://localhost:5173
 - Redirect URLs:
-  - https://seu-dominio.com/**
+  - http://localhost:5173/**
+
+Produção (após deploy na Vercel):
+- Site URL: https://seu-projeto.vercel.app
+- Redirect URLs:
+  - https://seu-projeto.vercel.app/**
+  - https://seu-dominio.com/** (se tiver domínio customizado)
 ```
 
 ### 5. Configurar Backup Automático
