@@ -25,6 +25,7 @@ const Empresa: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [fetchingCnpj, setFetchingCnpj] = useState(false);
 
   const fetchCompanyData = useCallback(async () => {
     if (!user?.companyId) {
@@ -73,6 +74,51 @@ const Empresa: React.FC = () => {
 
   const handleMaskedChange = (name: string, value: string) => {
     setSettings(prev => ({ ...prev, [name]: value }));
+
+    // Auto-fetch company data when CNPJ is complete
+    if (name === 'cnpj' && value.replace(/\D/g, '').length === 14) {
+      fetchCnpjData(value);
+    }
+  };
+
+  const fetchCnpjData = async (cnpj: string) => {
+    const cleanCnpj = cnpj.replace(/\D/g, '');
+
+    if (cleanCnpj.length !== 14) {
+      toast.error('CNPJ inválido');
+      return;
+    }
+
+    setFetchingCnpj(true);
+
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+
+      if (!response.ok) {
+        throw new Error('CNPJ não encontrado');
+      }
+
+      const data = await response.json();
+
+      // Update settings with fetched data
+      setSettings(prev => ({
+        ...prev,
+        name: data.razao_social || data.nome_fantasia || prev.name,
+        email: data.email || prev.email,
+        phone: data.ddd_telefone_1 ? `${data.ddd_telefone_1}` : prev.phone,
+        address: `${data.logradouro}${data.numero ? ', ' + data.numero : ''}${data.complemento ? ' - ' + data.complemento : ''}`,
+        city: data.municipio || prev.city,
+        state: data.uf || prev.state,
+        zip_code: data.cep || prev.zip_code
+      }));
+
+      toast.success('Dados da empresa preenchidos automaticamente!');
+    } catch (error: any) {
+      console.error('Error fetching CNPJ data:', error);
+      toast.error('Não foi possível buscar os dados do CNPJ. Preencha manualmente.');
+    } finally {
+      setFetchingCnpj(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -194,8 +240,17 @@ const Empresa: React.FC = () => {
                     placeholder="00.000.000/0000-00"
                     className="pl-10"
                     required
+                    disabled={fetchingCnpj}
                   />
+                  {fetchingCnpj && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <Loader className="h-5 w-5 animate-spin text-accent" />
+                    </div>
+                  )}
                 </div>
+                {fetchingCnpj && (
+                  <p className="text-xs text-accent mt-1">Buscando dados da empresa...</p>
+                )}
               </div>
 
               <div>

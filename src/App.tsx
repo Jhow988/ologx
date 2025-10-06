@@ -6,6 +6,8 @@ import Frota from './pages/Cadastros/Frota';
 import Usuarios from './pages/Cadastros/Usuarios';
 import Clientes from './pages/Cadastros/Clientes';
 import Viagens from './pages/Viagens';
+import NovoServico from './pages/NovoServico';
+import EditarServico from './pages/EditarServico';
 import Manutencao from './pages/Manutencao';
 import Financeiro from './pages/Financeiro';
 import Relatorios from './pages/Relatorios';
@@ -84,6 +86,8 @@ const AppRoutes: React.FC = () => {
         <Route path="cadastros/clientes" element={<Clientes />} />
         <Route path="cadastros/categorias" element={<CategoriasFinanceiras />} />
         <Route path="servicos" element={<Viagens />} />
+        <Route path="servicos/novo" element={<NovoServico />} />
+        <Route path="servicos/editar/:id" element={<EditarServico />} />
         <Route path="manutencao" element={<Manutencao />} />
         <Route path="financeiro" element={<Navigate to="/financeiro/pagar" replace />} />
         <Route path="financeiro/:view" element={<Financeiro />} />
