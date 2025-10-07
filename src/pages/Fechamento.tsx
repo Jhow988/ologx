@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Download, Search } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +13,7 @@ interface Trip {
   start_date: string;
   cte: string | null;
   nf: string | null;
+  requester: string | null;
   client_id: string;
   vehicle_id: string;
   driver_id: string;
@@ -18,7 +21,7 @@ interface Trip {
   destination: string;
   freight_type: string | null;
   insurance_info: string | null;
-  value: number;
+  freight_value: number;
   status: string;
 }
 
@@ -64,6 +67,7 @@ const Fechamento: React.FC = () => {
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [totalValue, setTotalValue] = useState(0);
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [companyName, setCompanyName] = useState<string>('Empresa');
 
   const fetchData = useCallback(async () => {
     if (!user?.companyId) return;
@@ -71,7 +75,7 @@ const Fechamento: React.FC = () => {
 
     try {
       // Fetch all required data
-      const [tripsRes, clientsRes, vehiclesRes, driversRes, companiesRes] = await Promise.all([
+      const [tripsRes, clientsRes, vehiclesRes, driversRes, companiesRes, currentCompanyRes] = await Promise.all([
         supabase
           .from('trips')
           .select('*')
@@ -83,7 +87,8 @@ const Fechamento: React.FC = () => {
         supabase.from('clients').select('id, name, city').eq('company_id', user.companyId),
         supabase.from('vehicles').select('id, plate, model').eq('company_id', user.companyId),
         supabase.from('profiles').select('id, full_name').eq('company_id', user.companyId).eq('role', 'driver'),
-        supabase.from('companies').select('id, name')
+        supabase.from('companies').select('id, name'),
+        supabase.from('companies').select('name').eq('id', user.companyId).single()
       ]);
 
       if (tripsRes.error) throw tripsRes.error;
@@ -96,6 +101,11 @@ const Fechamento: React.FC = () => {
 
       setCompanies(allCompanies);
 
+      // Set current company name
+      if (currentCompanyRes.data) {
+        setCompanyName(currentCompanyRes.data.name);
+      }
+
       // Map trips to service records
       const records: ServiceRecord[] = trips.map(trip => {
         const client = clients.find(c => c.id === trip.client_id);
@@ -106,14 +116,14 @@ const Fechamento: React.FC = () => {
           date: new Date(trip.start_date).toLocaleDateString('pt-BR'),
           cte: trip.cte || '-',
           nf: trip.nf || '-',
-          client: client?.name || '-',
-          service: `${trip.origin} - ${trip.destination}`,
+          client: trip.requester || client?.name || '-',
+          service: `${trip.origin} → ${trip.destination}`,
           city: client?.city || '-',
           vehicle: vehicle ? `${vehicle.plate}` : '-',
           driver: driver?.full_name || '-',
-          freightType: trip.freight_type || 'Frete Integral',
-          insurance: trip.insurance_info || 'R$0',
-          value: trip.value
+          freightType: trip.freight_type || '-',
+          insurance: trip.insurance_info || '-',
+          value: trip.freight_value || 0
         };
       });
 
@@ -136,7 +146,112 @@ const Fechamento: React.FC = () => {
   };
 
   const handleExportPDF = () => {
-    toast.success('Exportação de PDF em desenvolvimento');
+    try {
+      // Create new PDF document in landscape mode
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Format dates for display
+      const startDateFormatted = new Date(filters.startDate).toLocaleDateString('pt-BR');
+      const endDateFormatted = new Date(filters.endDate).toLocaleDateString('pt-BR');
+
+      // Add header
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Fechamento de Serviços', doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.text(`Período: ${startDateFormatted} a ${endDateFormatted}`, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
+
+      // Add info section
+      doc.setFontSize(9);
+      doc.text(`Total de Serviços: ${services.length}`, 14, 36);
+      doc.text(`Valor Total: ${formatCurrency(totalValue)}`, doc.internal.pageSize.getWidth() / 2, 36, { align: 'center' });
+      doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, doc.internal.pageSize.getWidth() - 14, 36, { align: 'right' });
+
+      // Prepare table data
+      const tableData = services.map(service => [
+        service.date,
+        service.cte,
+        service.nf,
+        service.client,
+        service.service,
+        service.city,
+        service.vehicle,
+        service.driver,
+        service.freightType,
+        service.insurance,
+        formatCurrency(service.value)
+      ]);
+
+      // Add table
+      autoTable(doc, {
+        startY: 42,
+        head: [['Data', 'CT-e', 'NF', 'Solicitante', 'Serviço', 'Cidade', 'Veículo', 'Motorista', 'Frete', 'Seguro', 'Valor']],
+        body: tableData,
+        foot: [['', '', '', '', '', '', '', '', '', 'TOTAL GERAL', formatCurrency(totalValue)]],
+        theme: 'striped',
+        headStyles: {
+          fillColor: [66, 139, 202],
+          textColor: [255, 255, 255],
+          fontSize: 8,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 7,
+          cellPadding: 2
+        },
+        footStyles: {
+          fillColor: [240, 240, 240],
+          textColor: [0, 0, 0],
+          fontSize: 8,
+          fontStyle: 'bold',
+          halign: 'right'
+        },
+        columnStyles: {
+          0: { cellWidth: 18 }, // Data
+          1: { cellWidth: 20 }, // CT-e
+          2: { cellWidth: 20 }, // NF
+          3: { cellWidth: 35 }, // Solicitante
+          4: { cellWidth: 40 }, // Serviço
+          5: { cellWidth: 25 }, // Cidade
+          6: { cellWidth: 20 }, // Veículo
+          7: { cellWidth: 30 }, // Motorista
+          8: { cellWidth: 25 }, // Frete
+          9: { cellWidth: 20 }, // Seguro
+          10: { cellWidth: 23, halign: 'right' } // Valor
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      // Add footer
+      const finalY = (doc as any).lastAutoTable.finalY || 42;
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `Documento gerado automaticamente pelo sistema OLogX em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`,
+        doc.internal.pageSize.getWidth() / 2,
+        finalY + 10,
+        { align: 'center' }
+      );
+
+      // Save PDF
+      const fileName = `Fechamento_${startDateFormatted.replace(/\//g, '-')}_a_${endDateFormatted.replace(/\//g, '-')}.pdf`;
+      doc.save(fileName);
+
+      toast.success('PDF exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error('Erro ao exportar PDF');
+    }
   };
 
   const formatCurrency = (value: number) => {

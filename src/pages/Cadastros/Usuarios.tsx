@@ -211,7 +211,7 @@ const Usuarios: React.FC = () => {
       header: 'Ações',
       render: (_: any, u: UserType) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', user: u })} title="Editar" />
+          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', user: u })} />
           <Button
             variant="ghost"
             size="sm"

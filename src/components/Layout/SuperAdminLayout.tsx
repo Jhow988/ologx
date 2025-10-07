@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building, Truck, LayoutDashboard } from 'lucide-react';
+import { Building, Truck, LayoutDashboard, Loader } from 'lucide-react';
 import Header from './Header';
+import { useAuth } from '../../contexts/AuthContext';
 
-const SuperAdminLayout: React.FC = () => {
+const SuperAdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, loading } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -15,6 +17,18 @@ const SuperAdminLayout: React.FC = () => {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/empresas', icon: Building, label: 'Empresas' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader className="animate-spin h-8 w-8 text-gray-500" />
+      </div>
+    );
+  }
+
+  if (!user || !user.isSuperAdmin) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-dark-bg">
@@ -66,7 +80,7 @@ const SuperAdminLayout: React.FC = () => {
       <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
         <Header onMenuClick={toggleSidebar} isSuperAdmin />
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </div>

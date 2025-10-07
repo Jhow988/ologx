@@ -17,24 +17,43 @@ const SuperAdminDashboard: React.FC = () => {
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
 
-    const [companiesRes, usersRes] = await Promise.all([
-      supabase.from('companies').select('id, status', { count: 'exact' }),
-      supabase.from('profiles').select('id', { count: 'exact' }).eq('is_super_admin', false),
-    ]);
+    try {
+      const [companiesRes, usersRes] = await Promise.all([
+        supabase.from('companies').select('id, status', { count: 'exact' }),
+        supabase.from('profiles').select('id', { count: 'exact' }).eq('is_super_admin', false),
+      ]);
 
-    const totalCompanies = companiesRes.count || 0;
-    const activeCompanies = companiesRes.data?.filter(c => c.status === 'active').length || 0;
-    const inactiveCompanies = totalCompanies - activeCompanies;
-    const totalUsers = usersRes.count || 0;
+      if (companiesRes.error) {
+        console.error('Erro ao buscar empresas:', companiesRes.error);
+      }
 
-    setStats({
-      totalCompanies,
-      activeCompanies,
-      inactiveCompanies,
-      totalUsers,
-    });
+      if (usersRes.error) {
+        console.error('Erro ao buscar usuários:', usersRes.error);
+      }
 
-    setLoading(false);
+      const totalCompanies = companiesRes.count || 0;
+      const activeCompanies = companiesRes.data?.filter(c => c.status === 'active').length || 0;
+      const inactiveCompanies = totalCompanies - activeCompanies;
+      const totalUsers = usersRes.count || 0;
+
+      setStats({
+        totalCompanies,
+        activeCompanies,
+        inactiveCompanies,
+        totalUsers,
+      });
+    } catch (error) {
+      console.error('Erro ao buscar dados do dashboard:', error);
+      // Definir stats com zeros em caso de erro
+      setStats({
+        totalCompanies: 0,
+        activeCompanies: 0,
+        inactiveCompanies: 0,
+        totalUsers: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

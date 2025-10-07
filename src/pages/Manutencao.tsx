@@ -205,7 +205,7 @@ const Manutencao: React.FC = () => {
       key: 'actions',
       header: 'Ações',
       render: (_: any, maintenance: Maintenance) => (
-        <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', maintenance })}>Editar</Button>
+        <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', maintenance })} />
       ),
     },
   ];

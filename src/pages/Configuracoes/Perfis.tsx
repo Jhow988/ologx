@@ -222,18 +222,14 @@ const Perfis: React.FC = () => {
                     size="sm"
                     icon={Edit2}
                     onClick={() => navigate(`/configuracoes/perfis/${role.id}`)}
-                  >
-                    Editar
-                  </Button>
+                  />
                   <Button
                     variant="outline"
                     size="sm"
                     icon={Trash2}
                     onClick={() => handleDelete(role.id)}
                     className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    Excluir
-                  </Button>
+                  />
                 </div>
               </div>
             ))}

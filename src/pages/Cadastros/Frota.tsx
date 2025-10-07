@@ -101,7 +101,7 @@ const Frota: React.FC = () => {
       key: 'actions',
       header: 'Ações',
       render: (_: any, vehicle: Vehicle) => (
-        <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', vehicle })}>Editar</Button>
+        <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', vehicle })} />
       ),
     },
   ];

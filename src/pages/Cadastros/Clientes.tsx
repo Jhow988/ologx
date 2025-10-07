@@ -70,7 +70,7 @@ const Clientes: React.FC = () => {
       key: 'actions',
       header: 'Ações',
       render: (_: any, client: Client) => (
-        <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', client })}>Editar</Button>
+        <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', client })} />
       ),
     },
   ];

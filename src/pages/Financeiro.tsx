@@ -137,7 +137,7 @@ const Financeiro: React.FC = () => {
       key: 'actions',
       header: 'Ações',
       render: (_: any, record: FinancialRecord) => (
-        <Button variant="ghost" size="sm" icon={CheckCircle} onClick={() => handleToggleStatus(record)} title="Marcar como Pago/Pendente" />
+        <Button variant="ghost" size="sm" icon={CheckCircle} onClick={() => handleToggleStatus(record)} />
       ),
     },
   ];

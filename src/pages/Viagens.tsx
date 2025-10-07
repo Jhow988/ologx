@@ -209,12 +209,8 @@ const Viagens: React.FC = () => {
       header: 'Ações',
       render: (_: any, trip: Trip) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" icon={Eye} onClick={() => setModalState({ type: 'details', trip })}>
-            Detalhes
-          </Button>
-          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => navigate(`/servicos/editar/${trip.id}`)}>
-            Editar
-          </Button>
+          <Button variant="ghost" size="sm" icon={Eye} onClick={() => setModalState({ type: 'details', trip })} />
+          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => navigate(`/servicos/editar/${trip.id}`)} />
         </div>
       ),
     },
