@@ -30,7 +30,8 @@ const Usuarios: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('company_id', user.companyId);
+        .eq('company_id', user.companyId)
+        .eq('is_super_admin', false); // Garantir que super admins nunca apareçam
 
       if (error) {
         console.error('Error fetching users:', error);
@@ -73,6 +74,7 @@ const Usuarios: React.FC = () => {
       const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
 
       // Create user with signUp
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
         password: tempPassword,
@@ -81,8 +83,9 @@ const Usuarios: React.FC = () => {
             full_name: fullName,
             role: role,
             company_id: user.companyId,
+            is_super_admin: false, // Garantir que nunca seja super admin
           },
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${appUrl}/login`,
         },
       });
 

@@ -26,7 +26,6 @@ import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
 import SuperAdminLayout from './components/Layout/SuperAdminLayout';
 import SuperAdminEmpresas from './pages/SuperAdmin/Empresas';
-import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
 import { Toaster } from 'react-hot-toast';
 
 const AppRoutes: React.FC = () => {
@@ -67,11 +66,10 @@ const AppRoutes: React.FC = () => {
     return (
       <SuperAdminLayout>
         <Routes>
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
+          <Route index element={<Navigate to="/admin/empresas" replace />} />
           <Route path="/admin/empresas" element={<SuperAdminEmpresas />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/admin/empresas" replace />} />
         </Routes>
       </SuperAdminLayout>
     );

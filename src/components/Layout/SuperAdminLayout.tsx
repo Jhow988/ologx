@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building, Truck, LayoutDashboard, Loader } from 'lucide-react';
+import { Building, Truck, Loader } from 'lucide-react';
 import Header from './Header';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -14,7 +14,6 @@ const SuperAdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
   };
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/empresas', icon: Building, label: 'Empresas' },
   ];
 

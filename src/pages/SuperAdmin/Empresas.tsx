@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, supabaseAdmin } from '../../lib/supabaseClient';
 import { Company } from '../../types';
 import Card from '../../components/UI/Card';
 import Table from '../../components/UI/Table';
@@ -7,6 +7,7 @@ import Button from '../../components/UI/Button';
 import Modal from '../../components/UI/Modal';
 import { Building, CheckCircle, XCircle, Plus, Loader, Save, Mail, Search, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { consultarCNPJ, formatCNPJ, validateCNPJ, cleanCNPJ } from '../../lib/cnpjService';
 
 const Empresas: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -15,9 +16,13 @@ const Empresas: React.FC = () => {
 
   const [isNewCompanyModalOpen, setIsNewCompanyModalOpen] = useState(false);
   const [newCompanyData, setNewCompanyData] = useState({
+    cnpj: '',
     name: '',
-    email: ''
+    email: '',
+    phone: '',
+    address: ''
   });
+  const [isLoadingCNPJ, setIsLoadingCNPJ] = useState(false);
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -54,6 +59,49 @@ const Empresas: React.FC = () => {
     fetchCompanies();
   }, [fetchCompanies]);
 
+  const handleCNPJBlur = async () => {
+    const cnpj = newCompanyData.cnpj;
+
+    if (!cnpj || cnpj.length < 14) {
+      return;
+    }
+
+    if (!validateCNPJ(cnpj)) {
+      toast.error('CNPJ inválido');
+      return;
+    }
+
+    setIsLoadingCNPJ(true);
+
+    try {
+      const data = await consultarCNPJ(cnpj);
+
+      if (data) {
+        setNewCompanyData({
+          ...newCompanyData,
+          cnpj: data.cnpj,
+          name: data.razao_social,
+          email: data.email || '',
+          phone: data.telefone || '',
+          address: [
+            data.logradouro,
+            data.numero,
+            data.complemento,
+            data.bairro,
+            `${data.municipio} - ${data.uf}`,
+            data.cep
+          ].filter(Boolean).join(', ')
+        });
+
+        toast.success('Dados da empresa carregados com sucesso!');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao consultar CNPJ');
+    } finally {
+      setIsLoadingCNPJ(false);
+    }
+  };
+
   const handleToggleStatus = async (company: Company) => {
     const newStatus = company.status === 'active' ? 'inactive' : 'active';
     const { error } = await supabase
@@ -72,70 +120,53 @@ const Empresas: React.FC = () => {
   const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newCompanyData.name.trim() || !newCompanyData.email.trim()) {
-      toast.error('Nome da empresa e email são obrigatórios.');
+    if (!newCompanyData.cnpj.trim()) {
+      toast.error('CNPJ é obrigatório.');
       return;
     }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newCompanyData.email)) {
-      toast.error('Por favor, insira um email válido.');
+    if (!validateCNPJ(newCompanyData.cnpj)) {
+      toast.error('CNPJ inválido.');
+      return;
+    }
+
+    if (!newCompanyData.name.trim()) {
+      toast.error('Nome da empresa é obrigatório.');
       return;
     }
 
     setIsSaving(true);
 
     try {
-      // 1. Criar a empresa
+      // Criar apenas a empresa, sem enviar email
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .insert([{
+          cnpj: cleanCNPJ(newCompanyData.cnpj),
           name: newCompanyData.name,
-          email: newCompanyData.email,
+          email: newCompanyData.email || null,
+          phone: newCompanyData.phone || null,
+          address: newCompanyData.address || null,
           status: 'active'
         }])
         .select()
         .single();
 
       if (companyError) {
+        if (companyError.code === '23505') {
+          throw new Error('CNPJ já cadastrado no sistema.');
+        }
         throw companyError;
       }
 
-      // 2. Enviar convite para o email cadastrado
-      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-        newCompanyData.email,
+      toast.success(
+        `Empresa "${newCompanyData.name}" cadastrada com sucesso! Use "Convidar Admin" para enviar o email de acesso.`,
         {
-          data: {
-            company_id: companyData.id,
-            company_name: newCompanyData.name,
-            role: 'admin',
-            is_super_admin: false
-          },
-          redirectTo: `${window.location.origin}/reset-password`
+          duration: 5000,
         }
       );
 
-      if (inviteError) {
-        console.error('Erro ao enviar convite:', inviteError);
-        // Mesmo com erro no envio do email, a empresa foi criada
-        toast(
-          `Empresa "${newCompanyData.name}" criada, mas houve erro ao enviar o convite. Use a função "Convidar Admin" para reenviar.`,
-          {
-            icon: '⚠️',
-            duration: 6000,
-          }
-        );
-      } else {
-        toast.success(
-          `Empresa "${newCompanyData.name}" criada! Um email foi enviado para ${newCompanyData.email} com instruções para criar a senha.`,
-          {
-            duration: 6000,
-          }
-        );
-      }
-
-      setNewCompanyData({ name: '', email: '' });
+      setNewCompanyData({ cnpj: '', name: '', email: '', phone: '', address: '' });
       setIsNewCompanyModalOpen(false);
       await fetchCompanies();
     } catch (error: any) {
@@ -152,20 +183,60 @@ const Empresas: React.FC = () => {
       toast.error('Email e empresa são obrigatórios.');
       return;
     }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      toast.error('Por favor, insira um email válido.');
+      return;
+    }
+
+    if (!supabaseAdmin) {
+      console.error('supabaseAdmin é null - Service Role Key não configurada');
+      toast.error('Service Role Key não configurada. Configure VITE_SUPABASE_SERVICE_ROLE_KEY no arquivo .env e reinicie o servidor.');
+      return;
+    }
+
+    console.log('Enviando convite para:', inviteEmail);
+    console.log('Empresa:', selectedCompany.name);
+
     setIsSaving(true);
 
-    const { error } = await supabase.functions.invoke('invite-user', {
-      body: { email: inviteEmail, company_id: selectedCompany.id },
-    });
+    try {
+      // Enviar convite usando Supabase Admin Client
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        inviteEmail,
+        {
+          data: {
+            company_id: selectedCompany.id,
+            company_name: selectedCompany.name,
+            role: 'admin',
+            is_super_admin: false
+          },
+          redirectTo: `${appUrl}/reset-password`
+        }
+      );
 
-    if (error) {
-      toast.error(`Erro ao enviar convite: ${error.message}`);
-    } else {
-      toast.success(`Convite enviado para ${inviteEmail}!`);
+      if (inviteError) {
+        throw inviteError;
+      }
+
+      toast.success(
+        `Convite enviado para ${inviteEmail}! O administrador receberá um email com instruções para criar a senha.`,
+        {
+          duration: 6000,
+        }
+      );
+
       setInviteEmail('');
       setIsInviteModalOpen(false);
+    } catch (error: any) {
+      console.error('Erro ao enviar convite:', error);
+      toast.error(`Erro ao enviar convite: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const openInviteModal = (company: Company) => {
@@ -296,11 +367,35 @@ const Empresas: React.FC = () => {
         isOpen={isNewCompanyModalOpen}
         onClose={() => {
           setIsNewCompanyModalOpen(false);
-          setNewCompanyData({ name: '', email: '' });
+          setNewCompanyData({ cnpj: '', name: '', email: '', phone: '', address: '' });
         }}
         title="Cadastrar Nova Empresa"
       >
         <form onSubmit={handleSaveCompany} className="space-y-4">
+          <div>
+            <label htmlFor="companyCNPJ" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+              CNPJ *
+            </label>
+            <input
+              id="companyCNPJ"
+              type="text"
+              value={newCompanyData.cnpj}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                setNewCompanyData({ ...newCompanyData, cnpj: formatCNPJ(value) });
+              }}
+              onBlur={handleCNPJBlur}
+              required
+              disabled={isLoadingCNPJ}
+              maxLength={18}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text disabled:opacity-50"
+              placeholder="00.000.000/0000-00"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {isLoadingCNPJ ? 'Consultando CNPJ...' : 'Os dados da empresa serão preenchidos automaticamente'}
+            </p>
+          </div>
+
           <div>
             <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
               Nome da Empresa *
@@ -317,20 +412,50 @@ const Empresas: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
-              Email do Administrador *
+            <label htmlFor="companyEmail" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+              Email da Empresa
             </label>
             <input
-              id="adminEmail"
+              id="companyEmail"
               type="email"
               value={newCompanyData.email}
               onChange={(e) => setNewCompanyData({ ...newCompanyData, email: e.target.value })}
-              required
               className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
-              placeholder="admin@empresa.com"
+              placeholder="contato@empresa.com"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Um email será enviado para este endereço com instruções para criar a senha.
+          </div>
+
+          <div>
+            <label htmlFor="companyPhone" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+              Telefone
+            </label>
+            <input
+              id="companyPhone"
+              type="tel"
+              value={newCompanyData.phone}
+              onChange={(e) => setNewCompanyData({ ...newCompanyData, phone: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+              placeholder="(00) 0000-0000"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="companyAddress" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+              Endereço
+            </label>
+            <textarea
+              id="companyAddress"
+              value={newCompanyData.address}
+              onChange={(e) => setNewCompanyData({ ...newCompanyData, address: e.target.value })}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text resize-none"
+              placeholder="Rua, número, bairro, cidade - UF, CEP"
+            />
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
+              <strong>Importante:</strong> Após cadastrar a empresa, use o botão "Convidar Admin" para enviar o email de acesso ao administrador.
             </p>
           </div>
 
@@ -340,14 +465,19 @@ const Empresas: React.FC = () => {
               variant="outline"
               onClick={() => {
                 setIsNewCompanyModalOpen(false);
-                setNewCompanyData({ name: '', email: '' });
+                setNewCompanyData({ cnpj: '', name: '', email: '', phone: '', address: '' });
               }}
-              disabled={isSaving}
+              disabled={isSaving || isLoadingCNPJ}
             >
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" icon={isSaving ? Loader : Save} disabled={isSaving}>
-              {isSaving ? 'Criando e Enviando Convite...' : 'Criar Empresa'}
+            <Button
+              type="submit"
+              variant="primary"
+              icon={isSaving ? Loader : Save}
+              disabled={isSaving || isLoadingCNPJ}
+            >
+              {isSaving ? 'Cadastrando...' : 'Cadastrar Empresa'}
             </Button>
           </div>
         </form>

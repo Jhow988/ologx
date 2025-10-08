@@ -5,7 +5,10 @@
       "Bash(echo:*)",
       "Bash(git mv:*)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Melhorias na UI e funcionalidades do Super Admin\n\n- Remover textos dos botões de ação, mantendo apenas ícones\n- Atualizar componente Button para suportar apenas ícones (children opcional)\n- Adicionar suporte ao atributo title no Button para tooltips\n\nExportação de PDF no Fechamento:\n- Implementar exportação de PDF com jspdf e jspdf-autotable\n- Buscar nome correto da empresa do banco de dados\n- Corrigir mapeamento de colunas (requester, freight_value)\n- Adicionar informações completas no PDF (empresa, período, totais)\n\nSuper Admin:\n- Corrigir renderização do SuperAdminLayout com children fallback\n- Adicionar filtros e busca na página de Gestão de Empresas\n- Filtro por status (Todas/Ativas/Inativas)\n- Campo de busca por nome da empresa\n- Contador de resultados filtrados\n\nCadastro de Empresas:\n- Atualizar formulário para incluir nome e email do administrador\n- Implementar envio de convite por email para criação de senha\n- Adicionar validação de email\n- Tratamento de erros robusto com mensagens informativas\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git log:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
