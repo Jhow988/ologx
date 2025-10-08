@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { Truck, Lock, Check } from 'lucide-react';
+import { Truck, Lock, Check, Loader2 } from 'lucide-react';
 import Button from '../../components/UI/Button';
 import toast from 'react-hot-toast';
 import PasswordStrengthIndicator from '../../components/UI/PasswordStrengthIndicator';
@@ -11,13 +11,13 @@ const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSessionReady, setIsSessionReady] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // This event confirms that Supabase has processed the token from the URL
-        // and a temporary session is active. The user can now update their password.
+        setIsSessionReady(true);
       }
     });
 
@@ -29,12 +29,16 @@ const ResetPassword: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!isSessionReady) {
+      toast.error('Aguarde a verificação do token de segurança.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error('As senhas não coincidem');
       return;
     }
 
-    // Validação com regras de segurança aprimoradas
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
       toast.error(passwordValidation.errors[0] || 'A senha não atende aos requisitos de segurança');
@@ -55,7 +59,11 @@ const ResetPassword: React.FC = () => {
         navigate('/login');
       }, 1500);
     } catch (error: any) {
-      toast.error(error.error_description || error.message || 'Erro ao redefinir senha');
+      if (error.message === "Auth session missing!") {
+        toast.error("Sessão expirada ou inválida. Por favor, solicite um novo link.");
+      } else {
+        toast.error(error.error_description || error.message || 'Erro ao redefinir senha');
+      }
     } finally {
       setLoading(false);
     }
@@ -70,7 +78,7 @@ const ResetPassword: React.FC = () => {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text">Nova Senha</h1>
           <p className="mt-2 text-gray-600 dark:text-dark-text-secondary">
-            Digite sua nova senha abaixo
+            {isSessionReady ? 'Digite sua nova senha abaixo' : 'Verificando seu token de segurança...'}
           </p>
         </div>
 
@@ -86,6 +94,7 @@ const ResetPassword: React.FC = () => {
               placeholder="Nova senha (mínimo 8 caracteres)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={!isSessionReady}
             />
           </div>
 
@@ -102,12 +111,13 @@ const ResetPassword: React.FC = () => {
               placeholder="Confirme a nova senha"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={!isSessionReady}
             />
           </div>
 
           <div>
-            <Button type="submit" disabled={loading} className="w-full" icon={Lock}>
-              {loading ? 'Redefinindo...' : 'Redefinir Senha'}
+            <Button type="submit" disabled={!isSessionReady || loading} className="w-full" icon={!isSessionReady || loading ? Loader2 : Lock}>
+              {loading ? 'Redefinindo...' : (!isSessionReady ? 'Verificando...' : 'Redefinir Senha')}
             </Button>
           </div>
         </form>
