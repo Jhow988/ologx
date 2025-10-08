@@ -15,6 +15,16 @@ const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Verifica se já existe uma sessão ativa
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsSessionReady(true);
+      }
+    };
+
+    checkSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsSessionReady(true);
