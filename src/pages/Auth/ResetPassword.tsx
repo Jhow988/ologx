@@ -18,15 +18,23 @@ const ResetPassword: React.FC = () => {
     // Verifica se já existe uma sessão ativa
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Sessão detectada:', session);
       if (session) {
         setIsSessionReady(true);
+      } else {
+        // Aguardar um pouco antes de marcar como pronto
+        // (workaround para casos onde a sessão demora a ser detectada)
+        setTimeout(() => {
+          setIsSessionReady(true);
+        }, 2000);
       }
     };
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session);
+      if (event === 'PASSWORD_RECOVERY' || session) {
         setIsSessionReady(true);
       }
     });
@@ -104,7 +112,6 @@ const ResetPassword: React.FC = () => {
               placeholder="Nova senha (mínimo 8 caracteres)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={!isSessionReady}
             />
           </div>
 
@@ -121,7 +128,6 @@ const ResetPassword: React.FC = () => {
               placeholder="Confirme a nova senha"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={!isSessionReady}
             />
           </div>
 
