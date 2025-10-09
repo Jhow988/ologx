@@ -8,7 +8,7 @@ import NewUserForm from '../../components/Forms/NewUserForm';
 import InviteUserForm from '../../components/Forms/InviteUserForm';
 import { User as UserType } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, supabaseAdmin } from '../../lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 const Usuarios: React.FC = () => {
@@ -69,25 +69,27 @@ const Usuarios: React.FC = () => {
       return;
     }
 
-    try {
-      // Generate a temporary password (user will need to reset it via email)
-      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
+    if (!supabaseAdmin) {
+      console.error('supabaseAdmin é null - Service Role Key não configurada');
+      toast.error('Service Role Key não configurada. Configure VITE_SUPABASE_SERVICE_ROLE_KEY no arquivo .env e reinicie o servidor.');
+      return;
+    }
 
-      // Create user with signUp
+    try {
+      // Usar inviteUserByEmail para criar um link que não expira tão rapidamente
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: tempPassword,
-        options: {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
           data: {
             full_name: fullName,
             role: role,
             company_id: user.companyId,
-            is_super_admin: false, // Garantir que nunca seja super admin
+            is_super_admin: false,
           },
-          emailRedirectTo: `${appUrl}/login`,
-        },
-      });
+          redirectTo: `${appUrl}/reset-password`,
+        }
+      );
 
       if (authError) {
         console.error('Error creating user:', authError);
