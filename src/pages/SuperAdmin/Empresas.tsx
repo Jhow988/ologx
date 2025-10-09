@@ -257,8 +257,13 @@ const Empresas: React.FC = () => {
       });
 
       if (createError) {
-        console.error('Erro detalhado ao criar usuário:', createError);
-        throw new Error(`Erro ao criar usuário: ${createError.message}`);
+        console.error('Erro detalhado ao criar usuário:', {
+          message: createError.message,
+          status: createError.status,
+          code: createError.code,
+          details: createError
+        });
+        throw new Error(`Erro ao criar usuário: ${createError.message || JSON.stringify(createError)}`);
       }
 
       console.log('Usuário criado com sucesso:', createData.user?.id);
