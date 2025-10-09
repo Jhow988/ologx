@@ -114,17 +114,12 @@ const Usuarios: React.FC = () => {
       // Gerar senha temporária aleatória
       const tempPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16) + 'A1!';
 
-      // Criar usuário
+      // Criar usuário SEM metadata (para evitar trigger problemático)
       const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: email,
         password: tempPassword,
-        email_confirm: true, // Confirmar email automaticamente
-        user_metadata: {
-          full_name: fullName,
-          role: role,
-          company_id: user.companyId,
-          is_super_admin: false,
-        }
+        email_confirm: true // Confirmar email automaticamente
+        // NÃO passar user_metadata aqui para evitar trigger
       });
 
       if (createError) {
@@ -134,6 +129,27 @@ const Usuarios: React.FC = () => {
       }
 
       console.log('Usuário criado:', createData.user?.id);
+
+      // Criar profile manualmente
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: createData.user!.id,
+          company_id: user.companyId,
+          full_name: fullName,
+          role: role,
+          is_super_admin: false
+        });
+
+      if (profileError) {
+        console.error('Erro ao criar profile:', profileError);
+        // Deletar usuário criado se falhar ao criar profile
+        await supabaseAdmin.auth.admin.deleteUser(createData.user!.id);
+        toast.error('Erro ao criar perfil do usuário: ' + profileError.message);
+        return;
+      }
+
+      console.log('Profile criado com sucesso');
 
       // Agora enviar email de reset de senha usando o cliente normal
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
