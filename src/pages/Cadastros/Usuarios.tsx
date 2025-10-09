@@ -130,26 +130,31 @@ const Usuarios: React.FC = () => {
 
       console.log('Usuário criado:', createData.user?.id);
 
-      // Criar profile manualmente
+      // Aguardar um pouco para o trigger criar o profile (se existir)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Atualizar/criar profile usando upsert (evita conflito se trigger já criou)
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
+        .upsert({
           id: createData.user!.id,
           company_id: user.companyId,
           full_name: fullName,
           role: role,
           is_super_admin: false
+        }, {
+          onConflict: 'id'
         });
 
       if (profileError) {
-        console.error('Erro ao criar profile:', profileError);
+        console.error('Erro ao criar/atualizar profile:', profileError);
         // Deletar usuário criado se falhar ao criar profile
         await supabaseAdmin.auth.admin.deleteUser(createData.user!.id);
         toast.error('Erro ao criar perfil do usuário: ' + profileError.message);
         return;
       }
 
-      console.log('Profile criado com sucesso');
+      console.log('Profile criado/atualizado com sucesso');
 
       // Agora enviar email de reset de senha usando o cliente normal
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
