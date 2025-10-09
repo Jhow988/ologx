@@ -108,25 +108,44 @@ const Usuarios: React.FC = () => {
         }
       }
 
-      // Usar inviteUserByEmail para criar um link que não expira tão rapidamente
+      // Criar usuário e enviar link de redefinição de senha
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+
+      // Gerar senha temporária aleatória
+      const tempPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16) + 'A1!';
+
+      // Criar usuário
+      const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: email,
+        password: tempPassword,
+        email_confirm: true, // Confirmar email automaticamente
+        user_metadata: {
+          full_name: fullName,
+          role: role,
+          company_id: user.companyId,
+          is_super_admin: false,
+        }
+      });
+
+      if (createError) {
+        console.error('Error creating user:', createError);
+        toast.error('Erro ao criar usuário: ' + createError.message);
+        return;
+      }
+
+      console.log('Usuário criado:', createData.user?.id);
+
+      // Agora enviar email de reset de senha usando o cliente normal
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
         {
-          data: {
-            full_name: fullName,
-            role: role,
-            company_id: user.companyId,
-            is_super_admin: false,
-          },
-          redirectTo: `${appUrl}/reset-password`,
+          redirectTo: `${appUrl}/reset-password`
         }
       );
 
-      if (authError) {
-        console.error('Error creating user:', authError);
-        toast.error('Erro ao criar usuário: ' + authError.message);
-        return;
+      if (resetError) {
+        console.error('Erro ao enviar email de reset:', resetError);
+        // Não falhar se o email não enviar, usuário foi criado
       }
 
       // Profile will be created automatically by trigger

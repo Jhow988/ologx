@@ -236,23 +236,42 @@ const Empresas: React.FC = () => {
         }
       }
 
-      // Enviar convite usando Supabase Admin Client
+      // Criar usuário e enviar link de redefinição de senha
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-      const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+
+      // Gerar senha temporária aleatória
+      const tempPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16) + 'A1!';
+
+      // Criar usuário
+      const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: inviteEmail,
+        password: tempPassword,
+        email_confirm: true, // Confirmar email automaticamente
+        user_metadata: {
+          company_id: selectedCompany.id,
+          company_name: selectedCompany.name,
+          role: 'admin',
+          is_super_admin: false
+        }
+      });
+
+      if (createError) {
+        throw createError;
+      }
+
+      console.log('Usuário criado:', createData.user?.id);
+
+      // Agora enviar email de reset de senha usando o cliente normal
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         inviteEmail,
         {
-          data: {
-            company_id: selectedCompany.id,
-            company_name: selectedCompany.name,
-            role: 'admin',
-            is_super_admin: false
-          },
           redirectTo: `${appUrl}/reset-password`
         }
       );
 
-      if (inviteError) {
-        throw inviteError;
+      if (resetError) {
+        console.error('Erro ao enviar email de reset:', resetError);
+        // Não falhar se o email não enviar, usuário foi criado
       }
 
       toast.success(
