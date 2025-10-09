@@ -3,6 +3,7 @@ import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building, Truck, Loader } from 'lucide-react';
 import Header from './Header';
+import Footer from './Footer';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SuperAdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
@@ -81,6 +82,7 @@ const SuperAdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
         <main className="flex-1 overflow-y-auto p-6">
           {children || <Outlet />}
         </main>
+        <Footer />
       </div>
     </div>
   );
