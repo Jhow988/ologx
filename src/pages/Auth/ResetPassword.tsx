@@ -85,11 +85,6 @@ const ResetPassword: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isSessionReady) {
-      toast.error('Aguarde a verificação do token de segurança.');
-      return;
-    }
-
     if (password !== confirmPassword) {
       toast.error('As senhas não coincidem');
       return;
@@ -104,6 +99,16 @@ const ResetPassword: React.FC = () => {
     setLoading(true);
 
     try {
+      // Verificar sessão antes de tentar atualizar
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Sessão ao tentar atualizar senha:', session);
+
+      if (!session) {
+        toast.error("Sessão expirada ou inválida. Por favor, solicite um novo link.");
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: password
       });
@@ -134,7 +139,7 @@ const ResetPassword: React.FC = () => {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text">Nova Senha</h1>
           <p className="mt-2 text-gray-600 dark:text-dark-text-secondary">
-            {isSessionReady ? 'Digite sua nova senha abaixo' : 'Verificando seu token de segurança...'}
+            Digite sua nova senha abaixo
           </p>
         </div>
 
@@ -170,8 +175,8 @@ const ResetPassword: React.FC = () => {
           </div>
 
           <div>
-            <Button type="submit" disabled={!isSessionReady || loading} className="w-full" icon={!isSessionReady || loading ? Loader2 : Lock}>
-              {loading ? 'Redefinindo...' : (!isSessionReady ? 'Verificando...' : 'Redefinir Senha')}
+            <Button type="submit" disabled={loading} className="w-full" icon={loading ? Loader2 : Lock}>
+              {loading ? 'Redefinindo...' : 'Redefinir Senha'}
             </Button>
           </div>
         </form>
