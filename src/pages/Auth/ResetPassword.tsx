@@ -15,26 +15,64 @@ const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verifica se já existe uma sessão ativa
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Sessão detectada:', session);
-      if (session) {
-        setIsSessionReady(true);
-      } else {
-        // Aguardar um pouco antes de marcar como pronto
-        // (workaround para casos onde a sessão demora a ser detectada)
-        setTimeout(() => {
+    const initializeSession = async () => {
+      // Processar hash fragments da URL (tokens de convite/recuperação)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+
+      console.log('Hash params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+
+      // Se temos tokens na URL, estabelecer sessão
+      if (accessToken && refreshToken) {
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (error) {
+            console.error('Erro ao estabelecer sessão:', error);
+            toast.error('Link inválido ou expirado. Solicite um novo convite.');
+            return;
+          }
+
+          console.log('Sessão estabelecida com sucesso:', data);
           setIsSessionReady(true);
-        }, 2000);
+
+          // Limpar hash da URL
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch (error) {
+          console.error('Erro ao processar tokens:', error);
+          toast.error('Erro ao processar link de convite.');
+        }
+      } else {
+        // Verificar se já existe uma sessão ativa
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Sessão existente:', session);
+
+        if (session) {
+          setIsSessionReady(true);
+        } else {
+          // Aguardar eventos de auth
+          setTimeout(async () => {
+            const { data: { session: laterSession } } = await supabase.auth.getSession();
+            if (laterSession) {
+              setIsSessionReady(true);
+            } else {
+              console.warn('Nenhuma sessão detectada após timeout');
+            }
+          }, 2000);
+        }
       }
     };
 
-    checkSession();
+    initializeSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state change:', event, session);
-      if (event === 'PASSWORD_RECOVERY' || session) {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || session) {
         setIsSessionReady(true);
       }
     });
