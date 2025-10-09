@@ -16,13 +16,35 @@ const ResetPassword: React.FC = () => {
 
   useEffect(() => {
     const initializeSession = async () => {
+      // Log completo da URL para diagnóstico
+      console.log('URL completa:', window.location.href);
+      console.log('Hash:', window.location.hash);
+      console.log('Search:', window.location.search);
+
       // Processar hash fragments da URL (tokens de convite/recuperação)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       const type = hashParams.get('type');
+      const error = hashParams.get('error');
+      const errorCode = hashParams.get('error_code');
+      const errorDescription = hashParams.get('error_description');
 
-      console.log('Hash params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+      console.log('Hash params:', {
+        accessToken: !!accessToken,
+        refreshToken: !!refreshToken,
+        type,
+        error,
+        errorCode,
+        errorDescription
+      });
+
+      // Se há erro na URL, mostrar imediatamente
+      if (error) {
+        console.error('Erro no link:', { error, errorCode, errorDescription });
+        toast.error(`Link inválido: ${errorDescription || error}. Solicite um novo convite.`);
+        return;
+      }
 
       // Se temos tokens na URL, estabelecer sessão
       if (accessToken && refreshToken) {

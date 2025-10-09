@@ -76,6 +76,38 @@ const Usuarios: React.FC = () => {
     }
 
     try {
+      // Primeiro, verificar se o usuário já existe
+      const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+
+      if (listError) {
+        console.error('Erro ao listar usuários:', listError);
+      } else {
+        const existingUser = existingUsers?.users?.find(u => u.email === email);
+
+        if (existingUser) {
+          console.log('Usuário já existe:', existingUser.id);
+
+          // Verificar se o usuário confirmou o email
+          if (!existingUser.email_confirmed_at) {
+            console.log('Usuário não confirmou email, deletando para reenviar...');
+
+            // Deletar usuário não confirmado
+            const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id);
+
+            if (deleteError) {
+              console.error('Erro ao deletar usuário:', deleteError);
+            } else {
+              console.log('Usuário deletado com sucesso');
+              // Aguardar um pouco para garantir que foi deletado
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } else {
+            toast.error('Este email já está cadastrado e ativo no sistema.');
+            return;
+          }
+        }
+      }
+
       // Usar inviteUserByEmail para criar um link que não expira tão rapidamente
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
