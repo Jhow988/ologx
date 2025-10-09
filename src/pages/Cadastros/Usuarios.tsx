@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Search, UserCheck, UserX, Loader } from 'lucide-react';
+import { Plus, Pencil, Search, UserCheck, UserX, Loader, Mail } from 'lucide-react';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Table from '../../components/UI/Table';
@@ -209,6 +209,44 @@ const Usuarios: React.FC = () => {
     closeModal();
   };
   
+  const handleResendInvite = async (userToResend: UserType) => {
+    if (!user?.companyId) return;
+
+    try {
+      // Buscar dados completos do usuário do Supabase
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userToResend.id)
+        .single();
+
+      if (!profileData) {
+        toast.error('Usuário não encontrado');
+        return;
+      }
+
+      // Enviar email de reset de senha
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        userToResend.email,
+        {
+          redirectTo: `${appUrl}/reset-password`
+        }
+      );
+
+      if (resetError) {
+        console.error('Erro ao reenviar convite:', resetError);
+        toast.error('Erro ao reenviar convite: ' + resetError.message);
+        return;
+      }
+
+      toast.success(`Convite reenviado para ${userToResend.email}!`);
+    } catch (error: any) {
+      console.error('Erro ao reenviar convite:', error);
+      toast.error('Erro ao reenviar convite: ' + error.message);
+    }
+  };
+
   const handleToggleStatusConfirm = () => {
     // This would require more complex logic, e.g., disabling a user in Supabase Auth
     // For now, it's a placeholder.
@@ -288,7 +326,18 @@ const Usuarios: React.FC = () => {
       header: 'Ações',
       render: (_: any, u: UserType) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', user: u })} />
+          {u.status === 'pending' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Mail}
+              onClick={() => handleResendInvite(u)}
+              title="Reenviar Convite"
+              className="text-blue-500 hover:bg-blue-100"
+            />
+          ) : (
+            <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setModalState({ type: 'edit', user: u })} />
+          )}
           <Button
             variant="ghost"
             size="sm"
