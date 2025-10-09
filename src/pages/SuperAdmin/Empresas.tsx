@@ -243,6 +243,7 @@ const Empresas: React.FC = () => {
       const tempPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16) + 'A1!';
 
       // Criar usuário
+      console.log('Tentando criar usuário:', inviteEmail);
       const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: inviteEmail,
         password: tempPassword,
@@ -256,10 +257,11 @@ const Empresas: React.FC = () => {
       });
 
       if (createError) {
-        throw createError;
+        console.error('Erro detalhado ao criar usuário:', createError);
+        throw new Error(`Erro ao criar usuário: ${createError.message}`);
       }
 
-      console.log('Usuário criado:', createData.user?.id);
+      console.log('Usuário criado com sucesso:', createData.user?.id);
 
       // Agora enviar email de reset de senha usando o cliente normal
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
