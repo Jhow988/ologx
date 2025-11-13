@@ -14,6 +14,7 @@ export interface User {
   role: 'admin' | 'manager' | 'driver' | 'operator';
   status: 'pending' | 'active' | 'inactive';
   cnhDueDate?: string;
+  cnhCategories?: string[];
   avatar?: string;
   isSuperAdmin: boolean;
 }
@@ -29,6 +30,7 @@ export interface Vehicle {
   driver?: string;
   lastMaintenance: string;
   licensing_due_date: string;
+  required_cnh_category?: 'A' | 'B' | 'C' | 'D' | 'E';
 }
 
 export interface Client {

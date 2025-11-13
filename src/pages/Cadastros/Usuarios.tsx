@@ -11,9 +11,15 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase, supabaseAdmin } from '../../lib/supabaseClient';
 import toast from 'react-hot-toast';
 
+interface CustomRole {
+  id: string;
+  name: string;
+}
+
 const Usuarios: React.FC = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserType[]>([]);
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -27,6 +33,14 @@ const Usuarios: React.FC = () => {
     setLoading(true);
 
     try {
+      // Buscar custom roles primeiro
+      const { data: rolesData } = await (supabase as any)
+        .from('custom_roles')
+        .select('id, name')
+        .eq('company_id', user.companyId);
+
+      setCustomRoles(rolesData || []);
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -44,7 +58,8 @@ const Usuarios: React.FC = () => {
           email: (p as any).email || 'N/A',
           role: p.role as UserType['role'],
           status: ((p as any).status || 'active') as UserType['status'],
-          cnhDueDate: p.cnh_due_date,
+          cnhDueDate: p.cnh_due_date || undefined,
+          cnhCategories: (p as any).cnh_categories || undefined,
           isSuperAdmin: p.is_super_admin,
         }));
 
@@ -63,7 +78,7 @@ const Usuarios: React.FC = () => {
   }, [fetchUsers]);
 
 
-  const handleInviteUser = async (email: string, role: string, fullName: string) => {
+  const handleInviteUser = async (email: string, role: string, fullName: string, password: string, cnhDueDate?: string, cnhCategories?: string[]) => {
     if (!user?.companyId) {
       toast.error('Erro: Empresa não identificada');
       return;
@@ -108,16 +123,10 @@ const Usuarios: React.FC = () => {
         }
       }
 
-      // Criar usuário e enviar link de redefinição de senha
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-
-      // Gerar senha temporária aleatória
-      const tempPassword = Math.random().toString(36).slice(-16) + Math.random().toString(36).slice(-16) + 'A1!';
-
-      // Criar usuário SEM metadata (para evitar trigger problemático)
+      // Criar usuário com a senha fornecida
       const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: email,
-        password: tempPassword,
+        password: password,
         email_confirm: true // Confirmar email automaticamente
         // NÃO passar user_metadata aqui para evitar trigger
       });
@@ -141,7 +150,10 @@ const Usuarios: React.FC = () => {
           company_id: user.companyId,
           full_name: fullName,
           role: role,
-          is_super_admin: false
+          is_super_admin: false,
+          status: 'active', // Usuário criado diretamente, já está ativo
+          cnh_due_date: cnhDueDate || null,
+          cnh_categories: cnhCategories || []
         }, {
           onConflict: 'id'
         });
@@ -156,24 +168,10 @@ const Usuarios: React.FC = () => {
 
       console.log('Profile criado/atualizado com sucesso');
 
-      // Agora enviar email de reset de senha usando o cliente normal
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo: `${appUrl}/reset-password`
-        }
-      );
-
-      if (resetError) {
-        console.error('Erro ao enviar email de reset:', resetError);
-        // Não falhar se o email não enviar, usuário foi criado
-      }
-
-      // Profile will be created automatically by trigger
-      // Just show success message
+      // Usuário criado com sucesso, status é ativo
       toast.success(
-        `Convite enviado com sucesso! Um email foi enviado para ${email}`,
-        { duration: 6000 }
+        `Usuário ${fullName} criado com sucesso!`,
+        { duration: 4000 }
       );
 
       // Wait a bit before refreshing to ensure DB is updated
@@ -226,7 +224,7 @@ const Usuarios: React.FC = () => {
       }
 
       // Enviar email de reset de senha
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.origin;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         userToResend.email,
         {
@@ -247,10 +245,78 @@ const Usuarios: React.FC = () => {
     }
   };
 
-  const handleToggleStatusConfirm = () => {
-    // This would require more complex logic, e.g., disabling a user in Supabase Auth
-    // For now, it's a placeholder.
-    closeModal();
+  const handleToggleStatusConfirm = async () => {
+    if (!modalState.user || !user?.companyId) return;
+
+    if (!supabaseAdmin) {
+      toast.error('Service Role Key não configurada. Não é possível alterar status de usuários.');
+      closeModal();
+      return;
+    }
+
+    const userToToggle = modalState.user;
+    const newStatus = userToToggle.status === 'active' ? 'inactive' : 'active';
+
+    try {
+      // 1. Atualizar status no perfil
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', userToToggle.id);
+
+      if (profileError) {
+        console.error('Erro ao atualizar status no perfil:', profileError);
+        toast.error('Erro ao atualizar status do usuário');
+        return;
+      }
+
+      // 2. Atualizar status no Supabase Auth
+      if (newStatus === 'inactive') {
+        // Desativar usuário no auth (ban)
+        const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(
+          userToToggle.id,
+          { ban_duration: 'none' } // Usar ban permanente
+        );
+
+        if (banError) {
+          console.error('Erro ao desativar usuário no auth:', banError);
+          // Reverter mudança no perfil
+          await supabase
+            .from('profiles')
+            .update({ status: 'active' })
+            .eq('id', userToToggle.id);
+          toast.error('Erro ao desativar acesso do usuário');
+          return;
+        }
+      } else {
+        // Reativar usuário no auth (unban)
+        const { error: unbanError } = await supabaseAdmin.auth.admin.updateUserById(
+          userToToggle.id,
+          { ban_duration: '0s' } // Remover ban
+        );
+
+        if (unbanError) {
+          console.error('Erro ao reativar usuário no auth:', unbanError);
+          // Reverter mudança no perfil
+          await supabase
+            .from('profiles')
+            .update({ status: 'inactive' })
+            .eq('id', userToToggle.id);
+          toast.error('Erro ao reativar acesso do usuário');
+          return;
+        }
+      }
+
+      toast.success(
+        `Usuário ${userToToggle.name} ${newStatus === 'active' ? 'reativado' : 'desativado'} com sucesso!`
+      );
+
+      await fetchUsers();
+      closeModal();
+    } catch (error: any) {
+      console.error('Erro ao alterar status:', error);
+      toast.error('Erro ao alterar status do usuário: ' + error.message);
+    }
   };
 
   const closeModal = () => {
@@ -267,7 +333,10 @@ const Usuarios: React.FC = () => {
       case 'manager': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
       case 'driver': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
       case 'operator': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      default: {
+        // Custom roles usam cor laranja/accent
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300';
+      }
     }
   };
 
@@ -277,7 +346,11 @@ const Usuarios: React.FC = () => {
       case 'manager': return 'Gerente';
       case 'driver': return 'Motorista';
       case 'operator': return 'Operador';
-      default: return role;
+      default: {
+        // Se for UUID, buscar o nome do custom role
+        const customRole = customRoles.find(r => r.id === role);
+        return customRole ? customRole.name : role;
+      }
     }
   };
 
@@ -322,6 +395,25 @@ const Usuarios: React.FC = () => {
     },
     { key: 'cnhDueDate', header: 'Venc. CNH', render: (date?: string) => date ? new Date(date + 'T12:00:00').toLocaleDateString('pt-BR') : 'N/A' },
     {
+      key: 'cnhCategories',
+      header: 'Categorias CNH',
+      render: (categories?: string[]) => {
+        if (!categories || categories.length === 0) return 'N/A';
+        return (
+          <div className="flex flex-wrap gap-1">
+            {categories.map((cat) => (
+              <span
+                key={cat}
+                className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: 'Ações',
       render: (_: any, u: UserType) => (
@@ -360,7 +452,7 @@ const Usuarios: React.FC = () => {
             <p className="text-gray-600 dark:text-dark-text-secondary">Gerencie usuários e suas permissões no sistema</p>
           </div>
           <Button variant="primary" icon={Plus} onClick={() => setModalState({ type: 'new', user: null })}>
-            Convidar Usuário
+            Novo Usuário
           </Button>
         </div>
 
@@ -386,7 +478,7 @@ const Usuarios: React.FC = () => {
       <Modal
         isOpen={modalState.type === 'new'}
         onClose={closeModal}
-        title="Convidar Novo Usuário"
+        title="Criar Novo Usuário"
       >
         <InviteUserForm onInvite={handleInviteUser} onCancel={closeModal} />
       </Modal>
@@ -405,10 +497,32 @@ const Usuarios: React.FC = () => {
           onClose={closeModal}
           title={`Confirmar ${modalState.user.status === 'active' ? 'Desativação' : 'Reativação'}`}
         >
-          <p>A funcionalidade de ativar/desativar usuários deve ser configurada no Supabase.</p>
-          <div className="flex justify-end gap-4 mt-6 pt-4 border-t">
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-dark-text">
+              {modalState.user.status === 'active' ? (
+                <>
+                  Tem certeza que deseja <strong className="text-red-600">desativar</strong> o usuário <strong>{modalState.user.name}</strong>?
+                  <br /><br />
+                  O usuário não poderá mais fazer login no sistema até que seja reativado.
+                </>
+              ) : (
+                <>
+                  Tem certeza que deseja <strong className="text-green-600">reativar</strong> o usuário <strong>{modalState.user.name}</strong>?
+                  <br /><br />
+                  O usuário poderá fazer login no sistema novamente.
+                </>
+              )}
+            </p>
+          </div>
+          <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-gray-200 dark:border-dark-border">
             <Button variant="outline" onClick={closeModal}>Cancelar</Button>
-            <Button variant="primary" onClick={handleToggleStatusConfirm}>Confirmar</Button>
+            <Button
+              variant={modalState.user.status === 'active' ? 'warning' : 'primary'}
+              onClick={handleToggleStatusConfirm}
+              className={modalState.user.status === 'active' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+            >
+              {modalState.user.status === 'active' ? 'Desativar' : 'Reativar'}
+            </Button>
           </div>
         </Modal>
       )}

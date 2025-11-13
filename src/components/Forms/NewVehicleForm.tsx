@@ -18,6 +18,7 @@ const NewVehicleForm: React.FC<NewVehicleFormProps> = ({ initialData, onSave, on
     year: initialData?.year || new Date().getFullYear(),
     status: initialData?.status || 'available',
     licensing_due_date: initialData?.licensing_due_date || '',
+    required_cnh_category: initialData?.required_cnh_category || '',
   });
 
   const [formData, setFormData] = useState(getInitialState());
@@ -85,6 +86,28 @@ const NewVehicleForm: React.FC<NewVehicleFormProps> = ({ initialData, onSave, on
           <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Vencimento do Licenciamento</label>
           <input type="date" name="licensing_due_date" value={formData.licensing_due_date} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+          Categoria CNH Necessária
+        </label>
+        <select
+          name="required_cnh_category"
+          value={formData.required_cnh_category}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+        >
+          <option value="">Nenhuma (qualquer motorista)</option>
+          <option value="A">A - Motocicletas</option>
+          <option value="B">B - Carros de passeio</option>
+          <option value="C">C - Caminhões pequenos</option>
+          <option value="D">D - Ônibus e veículos com +8 passageiros</option>
+          <option value="E">E - Caminhões com reboque/carreta</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500 dark:text-dark-text-secondary">
+          Selecione a categoria mínima necessária para operar este veículo. Apenas motoristas com esta categoria poderão ser vinculados.
+        </p>
       </div>
       <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-dark-border">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

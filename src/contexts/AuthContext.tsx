@@ -34,18 +34,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Error fetching user profile:', error);
       throw new Error("Could not fetch user profile. This might be due to RLS policies.");
     }
-    
-    const userRole = profile.role as keyof typeof roles;
-    const permissions = profile.is_super_admin 
-      ? Object.values(roles).flatMap(r => r.permissions)
-      : roles[userRole]?.permissions || [];
-    
+
+    const userRole = profile.role;
+    let permissions: string[] = [];
+
+    // Se for super admin, tem todas as permissões
+    if (profile.is_super_admin) {
+      permissions = Object.values(roles).flatMap(r => r.permissions);
+    }
+    // Se for role padrão (admin), buscar permissões do config
+    else if (userRole === 'admin') {
+      permissions = roles.admin?.permissions || [];
+    }
+    // Se for UUID (custom role), buscar permissões do banco
+    else if (userRole && userRole.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      try {
+        const { data: customRole } = await (supabase as any)
+          .from('custom_roles')
+          .select('permissions')
+          .eq('id', userRole)
+          .single();
+
+        permissions = customRole?.permissions || [];
+      } catch (err) {
+        console.error('Error fetching custom role permissions:', err);
+        permissions = [];
+      }
+    }
+    // Fallback para roles antigos que ainda podem existir
+    else {
+      const roleKey = userRole as keyof typeof roles;
+      permissions = roles[roleKey]?.permissions || [];
+    }
+
     return {
       id: profile.id,
       companyId: profile.company_id,
       name: profile.full_name || supabaseUser.email || 'Usuário',
       email: supabaseUser.email || '',
-      role: userRole,
+      role: userRole as any,
       status: 'active',
       isSuperAdmin: profile.is_super_admin,
       permissions: permissions,

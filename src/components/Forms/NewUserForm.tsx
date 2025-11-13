@@ -15,6 +15,7 @@ const NewUserForm: React.FC<NewUserFormProps> = ({ initialData, onSave, onCancel
     email: initialData?.email || '',
     role: initialData?.role || 'operator',
     cnhDueDate: initialData?.cnhDueDate || '',
+    cnhCategories: initialData?.cnhCategories || [] as string[],
   });
 
   const [formData, setFormData] = useState(getInitialState());
@@ -26,6 +27,15 @@ const NewUserForm: React.FC<NewUserFormProps> = ({ initialData, onSave, onCancel
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCnhCategoryToggle = (category: string) => {
+    setFormData(prev => ({
+      ...prev,
+      cnhCategories: prev.cnhCategories.includes(category)
+        ? prev.cnhCategories.filter(c => c !== category)
+        : [...prev.cnhCategories, category]
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,10 +71,38 @@ const NewUserForm: React.FC<NewUserFormProps> = ({ initialData, onSave, onCancel
         </select>
       </div>
       {formData.role === 'driver' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Vencimento da CNH</label>
-          <input type="date" name="cnhDueDate" value={formData.cnhDueDate} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
-        </div>
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Vencimento da CNH</label>
+            <input type="date" name="cnhDueDate" value={formData.cnhDueDate} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+              Categorias da CNH
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {['A', 'B', 'C', 'D', 'E'].map((category) => (
+                <label
+                  key={category}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.cnhCategories.includes(category)}
+                    onChange={() => handleCnhCategoryToggle(category)}
+                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-dark-text">
+                    {category}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-dark-text-secondary">
+              Selecione as categorias que o motorista pode operar.
+            </p>
+          </div>
+        </>
       )}
       <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-dark-border mt-4">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Search, Loader, Paperclip, Eye, Calendar, Mail, Send, Check } from 'lucide-react';
+import { Plus, Pencil, Search, Loader, Paperclip, Eye, Calendar } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Table from '../components/UI/Table';
@@ -12,8 +12,6 @@ import { useTrips } from '../hooks/useTrips';
 import { useClients } from '../hooks/useClients';
 import { useVehicles } from '../hooks/useVehicles';
 import { supabase } from '../lib/supabaseClient';
-import toast from 'react-hot-toast';
-import { sendTripAttachments } from '../services/emailService';
 
 const Viagens: React.FC = () => {
   const navigate = useNavigate();
@@ -22,11 +20,9 @@ const Viagens: React.FC = () => {
   const { clients } = useClients();
   const { vehicles } = useVehicles();
   const [drivers, setDrivers] = useState<User[]>([]);
-  const [companyName, setCompanyName] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [sendingEmail, setSendingEmail] = useState(false);
 
   const [modalState, setModalState] = useState<{
     type: 'new' | 'edit' | 'details' | null;
@@ -60,27 +56,6 @@ const Viagens: React.FC = () => {
   useEffect(() => {
     fetchDrivers();
   }, [fetchDrivers]);
-  // Buscar nome da empresa
-  const fetchCompanyName = useCallback(async () => {
-    if (!user?.companyId) return;
-
-    const { data, error } = await supabase
-      .from('companies')
-      .select('name')
-      .eq('id', user.companyId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching company:', error);
-    } else if (data) {
-      setCompanyName(data.name);
-    }
-  }, [user?.companyId]);
-
-  useEffect(() => {
-    fetchCompanyName();
-  }, [fetchCompanyName]);
-
 
   // Mapear trips para o formato esperado
   const trips = rawTrips.map((t: any) => ({
@@ -103,8 +78,6 @@ const Viagens: React.FC = () => {
     requester: t.requester,
     distance: t.distance || 0,
     attachments: t.attachments || [],
-    email_sent: t.email_sent || false,
-    email_sent_at: t.email_sent_at,
   })) as Trip[];
 
   const handleSaveTrip = async (tripData: Partial<Trip>) => {
@@ -151,73 +124,12 @@ const Viagens: React.FC = () => {
     setModalState({ type: null, trip: null });
   };
 
-  const handleSendEmail = async (trip: Trip) => {
-    if (!trip.attachments || trip.attachments.length === 0) {
-      toast.error('Não há anexos para enviar');
-      return;
-    }
-
-    // Buscar email do cliente
-    const client = clients.find(c => c.id === trip.clientId);
-    if (!client || !client.email) {
-      toast.error('Cliente não possui email cadastrado');
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      // Enviar email via Resend
-      await sendTripAttachments({
-        trip,
-        client,
-        companyName: companyName || 'OLogX',
-      });
-
-      // Atualizar status de email enviado
-      await updateTrip(trip.id, {
-        email_sent: true,
-        email_sent_at: new Date().toISOString()
-      });
-
-      toast.success(`Email enviado com sucesso para ${client.email}`);
-      closeModal();
-    } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      toast.error('Erro ao enviar email. Tente novamente.');
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  const filteredTrips = trips.filter(trip => {
-    // Filtro de busca por texto
-    const matchesSearch = trip.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.vehiclePlate?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Filtro de datas
-    let matchesDateRange = true;
-    if (startDate || endDate) {
-      if (!trip.startDate) {
-        matchesDateRange = false;
-      } else {
-        const tripDate = new Date(trip.startDate.split('T')[0]);
-
-        if (startDate) {
-          const filterStartDate = new Date(startDate);
-          if (tripDate < filterStartDate) matchesDateRange = false;
-        }
-
-        if (endDate) {
-          const filterEndDate = new Date(endDate);
-          if (tripDate > filterEndDate) matchesDateRange = false;
-        }
-      }
-    }
-
-    return matchesSearch && matchesDateRange;
-  });
+  const filteredTrips = trips.filter(trip =>
+    trip.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trip.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trip.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trip.vehiclePlate?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -318,45 +230,15 @@ const Viagens: React.FC = () => {
         </div>
 
         <Card>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por cliente, origem, destino ou placa..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-              />
-            </div>
-            <div className="flex gap-2">
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-                  placeholder="Data inicial"
-                />
-              </div>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-                  placeholder="Data final"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
-              Mostrando {filteredTrips.length} de {trips.length} serviço(s)
-            </p>
+          <div className="flex-1 relative mb-6">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por cliente, origem, destino ou placa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg"
+            />
           </div>
           {tripsLoading ? (
             <div className="flex justify-center items-center h-64"><Loader className="h-8 w-8 animate-spin text-primary" /></div>
@@ -473,30 +355,7 @@ const Viagens: React.FC = () => {
             {/* Anexos */}
             {modalState.trip.attachments && modalState.trip.attachments.length > 0 && (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Anexos ({modalState.trip.attachments.length})
-                  </label>
-                  {modalState.trip.email_sent ? (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                        Enviado {modalState.trip.email_sent_at ? new Date(modalState.trip.email_sent_at).toLocaleDateString('pt-BR') : ''}
-                      </span>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      icon={Send}
-                      onClick={() => handleSendEmail(modalState.trip!)}
-                      disabled={sendingEmail}
-                      className="text-xs"
-                    >
-                      {sendingEmail ? 'Enviando...' : 'Enviar para Cliente'}
-                    </Button>
-                  )}
-                </div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Anexos ({modalState.trip.attachments.length})</label>
                 <div className="grid grid-cols-1 gap-2">
                   {modalState.trip.attachments.map((att: any, idx: number) => (
                     <a

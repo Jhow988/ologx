@@ -62,11 +62,11 @@ const Fechamento: React.FC = () => {
   const [filters, setFilters] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
-    company: 'all'
+    client: 'all'
   });
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [totalValue, setTotalValue] = useState(0);
-  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [companyName, setCompanyName] = useState<string>('Empresa');
 
   const fetchData = useCallback(async () => {
@@ -74,32 +74,38 @@ const Fechamento: React.FC = () => {
     setLoading(true);
 
     try {
+      // Build query for trips with optional client filter
+      let tripsQuery = supabase
+        .from('trips')
+        .select('*')
+        .eq('company_id', user.companyId)
+        .eq('status', 'completed')
+        .gte('start_date', filters.startDate)
+        .lte('start_date', filters.endDate)
+        .order('start_date', { ascending: true });
+
+      // Apply client filter if selected
+      if (filters.client !== 'all') {
+        tripsQuery = tripsQuery.eq('client_id', filters.client);
+      }
+
       // Fetch all required data
-      const [tripsRes, clientsRes, vehiclesRes, driversRes, companiesRes, currentCompanyRes] = await Promise.all([
-        supabase
-          .from('trips')
-          .select('*')
-          .eq('company_id', user.companyId)
-          .eq('status', 'completed')
-          .gte('start_date', filters.startDate)
-          .lte('start_date', filters.endDate)
-          .order('start_date', { ascending: true }),
-        supabase.from('clients').select('id, name, city').eq('company_id', user.companyId),
+      const [tripsRes, clientsRes, vehiclesRes, driversRes, currentCompanyRes] = await Promise.all([
+        tripsQuery,
+        supabase.from('clients').select('id, name, city').eq('company_id', user.companyId).order('name'),
         supabase.from('vehicles').select('id, plate, model').eq('company_id', user.companyId),
-        supabase.from('profiles').select('id, full_name').eq('company_id', user.companyId).eq('role', 'driver'),
-        supabase.from('companies').select('id, name'),
+        supabase.from('profiles').select('id, full_name').eq('company_id', user.companyId).not('cnh_due_date', 'is', null),
         supabase.from('companies').select('name').eq('id', user.companyId).single()
       ]);
 
       if (tripsRes.error) throw tripsRes.error;
 
       const trips = (tripsRes.data || []) as Trip[];
-      const clients = (clientsRes.data || []) as Client[];
+      const clientsList = (clientsRes.data || []) as Client[];
       const vehicles = (vehiclesRes.data || []) as Vehicle[];
       const drivers = (driversRes.data || []) as Driver[];
-      const allCompanies = (companiesRes.data || []) as { id: string; name: string }[];
 
-      setCompanies(allCompanies);
+      setClients(clientsList);
 
       // Set current company name
       if (currentCompanyRes.data) {
@@ -108,7 +114,7 @@ const Fechamento: React.FC = () => {
 
       // Map trips to service records
       const records: ServiceRecord[] = trips.map(trip => {
-        const client = clients.find(c => c.id === trip.client_id);
+        const client = clientsList.find(c => c.id === trip.client_id);
         const vehicle = vehicles.find(v => v.id === trip.vehicle_id);
         const driver = drivers.find(d => d.id === trip.driver_id);
 
@@ -135,7 +141,7 @@ const Fechamento: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.companyId, filters.startDate, filters.endDate]);
+  }, [user?.companyId, filters.startDate, filters.endDate, filters.client]);
 
   useEffect(() => {
     fetchData();
@@ -277,7 +283,7 @@ const Fechamento: React.FC = () => {
           Fechamento de Serviços
         </h1>
         <p className="text-gray-600 dark:text-dark-text-secondary">
-          Selecione o período e a empresa para gerar o fechamento
+          Selecione o período e o cliente para gerar o fechamento
         </p>
       </div>
 
@@ -308,16 +314,16 @@ const Fechamento: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
-              Empresa
+              Cliente
             </label>
             <select
-              value={filters.company}
-              onChange={(e) => setFilters({ ...filters, company: e.target.value })}
+              value={filters.client}
+              onChange={(e) => setFilters({ ...filters, client: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
             >
-              <option value="all">Todas</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>{company.name}</option>
+              <option value="all">Todos</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>
           </div>

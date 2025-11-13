@@ -96,6 +96,8 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
 
   const { availableDrivers, availableVehicles } = useMemo(() => {
     const selectedDate = formData.startDate;
+    const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
+
     if (!selectedDate) {
       return {
         availableDrivers: users.filter(u => u.role === 'driver' && u.status === 'active'),
@@ -114,11 +116,22 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
       }
     });
 
-    const drivers = users.filter(u => u.role === 'driver' && u.status === 'active' && !unavailableDriverIds.has(u.id));
+    let drivers = users.filter(u => u.role === 'driver' && u.status === 'active' && !unavailableDriverIds.has(u.id));
+
+    // Filtrar motoristas pela categoria CNH necessária do veículo
+    if (selectedVehicle?.required_cnh_category) {
+      drivers = drivers.filter(driver => {
+        // Se o motorista não tem categorias CNH, não pode dirigir
+        if (!driver.cnhCategories || driver.cnhCategories.length === 0) return false;
+        // Verificar se o motorista tem a categoria necessária
+        return driver.cnhCategories.includes(selectedVehicle.required_cnh_category);
+      });
+    }
+
     const vehiclesList = vehicles.filter(v => ['active', 'available'].includes(v.status) && !unavailableVehicleIds.has(v.id)); // Aceita 'active' ou 'available'
 
     return { availableDrivers: drivers, availableVehicles: vehiclesList };
-  }, [formData.startDate, trips, users, vehicles, initialData]);
+  }, [formData.startDate, formData.vehicleId, trips, users, vehicles, initialData]);
 
   useEffect(() => {
     if (formData.driverId && !availableDrivers.some(d => d.id === formData.driverId)) {
@@ -276,6 +289,11 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
                   <option value="">Selecione</option>
                   {availableDrivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
                 </select>
+                {formData.vehicleId && vehicles.find(v => v.id === formData.vehicleId)?.required_cnh_category && (
+                  <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                    ⚠️ Este veículo requer CNH categoria {vehicles.find(v => v.id === formData.vehicleId)?.required_cnh_category}. Apenas motoristas com esta categoria estão listados.
+                  </p>
+                )}
               </div>
             </div>
           </div>

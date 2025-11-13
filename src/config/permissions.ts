@@ -65,44 +65,11 @@ export const permissionsMap = {
 };
 
 // Define roles and their associated permissions
+// Apenas o perfil Admin é padrão. Outros perfis devem ser criados como personalizados.
 export const roles = {
   admin: {
     name: 'Administrador',
     description: 'Acesso total e irrestrito a todas as funcionalidades do sistema.',
     permissions: Object.values(permissionsMap).flatMap(group => Object.keys(group.permissions)),
-  },
-  manager: {
-    name: 'Gerente',
-    description: 'Acesso a funcionalidades de gestão, relatórios e supervisão de equipes.',
-    permissions: [
-      'servicos:criar',
-      'servicos:cancelar',
-      'servicos:ver_todos',
-      'cadastros:gerenciar_frota',
-      'cadastros:gerenciar_clientes',
-      'usuarios:gerenciar',
-      'financeiro:ver_tudo',
-      'financeiro:realizar_fechamento',
-      'relatorios:ver_todos',
-    ],
-  },
-  operator: {
-    name: 'Operador',
-    description: 'Acesso focado na operação diária, como criação e acompanhamento de serviços.',
-    permissions: [
-      'servicos:criar',
-      'servicos:ver_todos',
-      'cadastros:gerenciar_clientes',
-    ],
-  },
-  driver: {
-    name: 'Motorista',
-    description: 'Acesso a serviços e manutenções.',
-    permissions: [
-      'servicos:criar',
-      'servicos:ver_todos',
-      'manutencao:ver',
-      'manutencao:gerenciar',
-    ],
   },
 };

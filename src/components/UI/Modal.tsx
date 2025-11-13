@@ -36,10 +36,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className={`bg-white dark:bg-dark-bg-secondary rounded-lg shadow-xl w-full ${sizeClasses[size]}`}
+            className={`bg-white dark:bg-dark-bg-secondary rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-border">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-border flex-shrink-0">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text">{title}</h3>
               <button
                 onClick={onClose}
@@ -48,7 +48,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               {children}
             </div>
           </motion.div>
