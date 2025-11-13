@@ -20,6 +20,7 @@ import CategoriasFinanceiras from './pages/Cadastros/CategoriasFinanceiras';
 import Profile from './pages/Profile';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AlertsProvider } from './contexts/AlertsContext';
 import Login from './pages/Auth/Login';
 import SignUp from './pages/Auth/SignUp';
 import ForgotPassword from './pages/Auth/ForgotPassword';
@@ -109,8 +110,10 @@ const App: React.FC = () => {
     <ThemeProvider>
       <Router>
         <AuthProvider>
-          <AppRoutes />
-          <Toaster position="bottom-right" />
+          <AlertsProvider>
+            <AppRoutes />
+            <Toaster position="bottom-right" />
+          </AlertsProvider>
         </AuthProvider>
       </Router>
     </ThemeProvider>

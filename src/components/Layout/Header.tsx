@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Bell, User, LogOut, Sun, Moon, Building } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabaseClient';
+import { useAlerts } from '../../contexts/AlertsContext';
 import Modal from '../UI/Modal';
 import Button from '../UI/Button';
 
@@ -15,82 +15,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isSuperAdmin = false }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const { unreadCount } = useAlerts();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
-
-  // Fetch unread alerts count
-  useEffect(() => {
-    const fetchAlertsCount = async () => {
-      if (!user?.companyId || !user?.id || isSuperAdmin) return;
-
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-        // Fetch vehicles with licensing due in 30 days
-        const { data: vehicles } = await supabase
-          .from('vehicles')
-          .select('id, licensing_due_date')
-          .eq('company_id', user.companyId);
-
-        // Fetch drivers with CNH due in 30 days
-        const { data: drivers } = await supabase
-          .from('profiles')
-          .select('id, cnh_due_date')
-          .eq('company_id', user.companyId)
-          .not('cnh_due_date', 'is', null);
-
-        // Fetch read alerts for this user
-        const { data: readAlerts } = await (supabase as any)
-          .from('read_alerts')
-          .select('alert_id')
-          .eq('user_id', user.id);
-
-        const readAlertIds = new Set(readAlerts?.map((r: any) => r.alert_id) || []);
-
-        // Generate alert IDs and count unread ones
-        let unreadCount = 0;
-
-        // Count licensing alerts
-        (vehicles || []).forEach((v: any) => {
-          if (v.licensing_due_date) {
-            const dueDate = new Date(v.licensing_due_date + 'T00:00:00');
-            if (dueDate <= thirtyDaysFromNow) {
-              const alertId = `licensing-${v.id}`;
-              if (!readAlertIds.has(alertId)) {
-                unreadCount++;
-              }
-            }
-          }
-        });
-
-        // Count CNH alerts
-        (drivers || []).forEach((d: any) => {
-          if (d.cnh_due_date) {
-            const dueDate = new Date(d.cnh_due_date + 'T00:00:00');
-            if (dueDate <= thirtyDaysFromNow) {
-              const alertId = `cnh-${d.id}`;
-              if (!readAlertIds.has(alertId)) {
-                unreadCount++;
-              }
-            }
-          }
-        });
-
-        setUnreadAlertsCount(unreadCount);
-      } catch (error) {
-        console.error('Error fetching alerts count:', error);
-      }
-    };
-
-    fetchAlertsCount();
-
-    // Refresh alerts every minute
-    const interval = setInterval(fetchAlertsCount, 60 * 1000);
-    return () => clearInterval(interval);
-  }, [user?.companyId, user?.id, isSuperAdmin]);
 
   const handleLogoutRequest = () => {
     setShowLogoutModal(true);
@@ -134,9 +60,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isSuperAdmin = false }) =>
             {!isSuperAdmin && (
               <Link to="/alertas" className="relative p-2 rounded-lg text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-border">
                 <Bell className="h-5 w-5" />
-                {unreadAlertsCount > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent rounded-full text-xs text-white flex items-center justify-center">
-                    {unreadAlertsCount}
+                    {unreadCount}
                   </span>
                 )}
               </Link>

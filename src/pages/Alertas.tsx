@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAlerts } from '../contexts/AlertsContext';
 import { supabase } from '../lib/supabaseClient';
 import { SystemAlert } from '../types';
 import { Loader, AlertTriangle, Calendar, User, Truck, CheckCircle, Check, Eye, EyeOff } from 'lucide-react';
@@ -9,6 +10,7 @@ import toast from 'react-hot-toast';
 
 const Alertas: React.FC = () => {
   const { user } = useAuth();
+  const { refreshUnreadCount } = useAlerts();
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [readAlerts, setReadAlerts] = useState<Set<string>>(new Set());
   const [showRead, setShowRead] = useState(false);
@@ -118,6 +120,9 @@ const Alertas: React.FC = () => {
 
       setReadAlerts(prev => new Set([...prev, alertId]));
       toast.success('Alerta marcado como lido');
+
+      // Atualizar contador do sino imediatamente
+      await refreshUnreadCount();
     } catch (error: any) {
       console.error('Error marking alert as read:', error);
       toast.error('Erro ao marcar alerta como lido');
@@ -146,6 +151,9 @@ const Alertas: React.FC = () => {
         return newSet;
       });
       toast.success('Alerta desmarcado');
+
+      // Atualizar contador do sino imediatamente
+      await refreshUnreadCount();
     } catch (error: any) {
       console.error('Error marking alert as unread:', error);
       toast.error('Erro ao desmarcar alerta');
