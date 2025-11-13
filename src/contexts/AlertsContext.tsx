@@ -1,10 +1,25 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
 interface AlertsContextType {
   unreadCount: number;
   refreshUnreadCount: () => Promise<void>;
+  isLoading: boolean;
+}
+
+interface ReadAlert {
+  alert_id: string;
+}
+
+interface Vehicle {
+  id: string;
+  licensing_due_date: string;
+}
+
+interface Driver {
+  id: string;
+  cnh_due_date: string;
 }
 
 const AlertsContext = createContext<AlertsContextType | undefined>(undefined);
@@ -12,12 +27,29 @@ const AlertsContext = createContext<AlertsContextType | undefined>(undefined);
 export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
   const refreshUnreadCount = useCallback(async () => {
+    // Prevenir chamadas duplicadas simultâneas
+    if (isFetchingRef.current) {
+      return;
+    }
+
+    // Super admin não deve ver alertas de empresas
+    if (user?.isSuperAdmin) {
+      setUnreadCount(0);
+      return;
+    }
+
+    // Verificar se usuário tem empresa e ID válidos
     if (!user?.companyId || !user?.id) {
       setUnreadCount(0);
       return;
     }
+
+    isFetchingRef.current = true;
+    setIsLoading(true);
 
     try {
       const today = new Date();
@@ -26,31 +58,48 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       thirtyDaysFromNow.setDate(today.getDate() + 30);
 
       // Fetch vehicles with licensing due in 30 days
-      const { data: vehicles } = await supabase
+      const { data: vehicles, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('id, licensing_due_date')
         .eq('company_id', user.companyId);
 
+      if (vehiclesError) {
+        console.error('Error fetching vehicles:', vehiclesError);
+        throw vehiclesError;
+      }
+
       // Fetch drivers with CNH due in 30 days
-      const { data: drivers } = await supabase
+      const { data: drivers, error: driversError } = await supabase
         .from('profiles')
         .select('id, cnh_due_date')
         .eq('company_id', user.companyId)
         .not('cnh_due_date', 'is', null);
 
+      if (driversError) {
+        console.error('Error fetching drivers:', driversError);
+        throw driversError;
+      }
+
       // Fetch read alerts for this user
-      const { data: readAlerts } = await (supabase as any)
+      const { data: readAlerts, error: readAlertsError } = await supabase
         .from('read_alerts')
         .select('alert_id')
         .eq('user_id', user.id);
 
-      const readAlertIds = new Set(readAlerts?.map((r: any) => r.alert_id) || []);
+      if (readAlertsError) {
+        console.error('Error fetching read alerts:', readAlertsError);
+        throw readAlertsError;
+      }
+
+      const readAlertIds = new Set(
+        (readAlerts as ReadAlert[] | null)?.map((r) => r.alert_id) || []
+      );
 
       // Generate alert IDs and count unread ones
       let count = 0;
 
       // Count licensing alerts
-      (vehicles || []).forEach((v: any) => {
+      (vehicles as Vehicle[] | null || []).forEach((v) => {
         if (v.licensing_due_date) {
           const dueDate = new Date(v.licensing_due_date + 'T00:00:00');
           if (dueDate <= thirtyDaysFromNow) {
@@ -63,7 +112,7 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       // Count CNH alerts
-      (drivers || []).forEach((d: any) => {
+      (drivers as Driver[] | null || []).forEach((d) => {
         if (d.cnh_due_date) {
           const dueDate = new Date(d.cnh_due_date + 'T00:00:00');
           if (dueDate <= thirtyDaysFromNow) {
@@ -78,8 +127,13 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching unread alerts count:', error);
+      // Em caso de erro, manter o contador anterior (não resetar para 0)
+      // Isso evita flicker na UI
+    } finally {
+      setIsLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [user?.companyId, user?.id]);
+  }, [user?.companyId, user?.id, user?.isSuperAdmin]);
 
   useEffect(() => {
     refreshUnreadCount();
@@ -90,7 +144,7 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [refreshUnreadCount]);
 
   return (
-    <AlertsContext.Provider value={{ unreadCount, refreshUnreadCount }}>
+    <AlertsContext.Provider value={{ unreadCount, refreshUnreadCount, isLoading }}>
       {children}
     </AlertsContext.Provider>
   );
