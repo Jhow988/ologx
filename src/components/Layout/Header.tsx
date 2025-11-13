@@ -18,40 +18,68 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isSuperAdmin = false }) =>
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
 
-  // Fetch alerts count
+  // Fetch unread alerts count
   useEffect(() => {
     const fetchAlertsCount = async () => {
-      if (!user?.companyId || isSuperAdmin) return;
+      if (!user?.companyId || !user?.id || isSuperAdmin) return;
 
       try {
-        const now = new Date();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(now.getDate() + 30);
+        thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-        // Count overdue financial records
-        const { count: overdueFinancials } = await supabase
-          .from('financial_records')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', user.companyId)
-          .eq('status', 'overdue');
-
-        // Count vehicles with licensing due in 30 days
-        const { count: licensingDue } = await supabase
+        // Fetch vehicles with licensing due in 30 days
+        const { data: vehicles } = await supabase
           .from('vehicles')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', user.companyId)
-          .lte('licensing_due_date', thirtyDaysFromNow.toISOString().split('T')[0]);
+          .select('id, licensing_due_date')
+          .eq('company_id', user.companyId);
 
-        // Count drivers with CNH due in 30 days
-        const { count: cnhDue } = await supabase
+        // Fetch drivers with CNH due in 30 days
+        const { data: drivers } = await supabase
           .from('profiles')
-          .select('*', { count: 'exact', head: true })
+          .select('id, cnh_due_date')
           .eq('company_id', user.companyId)
-          .eq('role', 'driver')
-          .lte('cnh_due_date', thirtyDaysFromNow.toISOString().split('T')[0]);
+          .not('cnh_due_date', 'is', null);
 
-        const total = (overdueFinancials || 0) + (licensingDue || 0) + (cnhDue || 0);
-        setUnreadAlertsCount(total);
+        // Fetch read alerts for this user
+        const { data: readAlerts } = await (supabase as any)
+          .from('read_alerts')
+          .select('alert_id')
+          .eq('user_id', user.id);
+
+        const readAlertIds = new Set(readAlerts?.map((r: any) => r.alert_id) || []);
+
+        // Generate alert IDs and count unread ones
+        let unreadCount = 0;
+
+        // Count licensing alerts
+        (vehicles || []).forEach((v: any) => {
+          if (v.licensing_due_date) {
+            const dueDate = new Date(v.licensing_due_date + 'T00:00:00');
+            if (dueDate <= thirtyDaysFromNow) {
+              const alertId = `licensing-${v.id}`;
+              if (!readAlertIds.has(alertId)) {
+                unreadCount++;
+              }
+            }
+          }
+        });
+
+        // Count CNH alerts
+        (drivers || []).forEach((d: any) => {
+          if (d.cnh_due_date) {
+            const dueDate = new Date(d.cnh_due_date + 'T00:00:00');
+            if (dueDate <= thirtyDaysFromNow) {
+              const alertId = `cnh-${d.id}`;
+              if (!readAlertIds.has(alertId)) {
+                unreadCount++;
+              }
+            }
+          }
+        });
+
+        setUnreadAlertsCount(unreadCount);
       } catch (error) {
         console.error('Error fetching alerts count:', error);
       }
@@ -59,10 +87,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isSuperAdmin = false }) =>
 
     fetchAlertsCount();
 
-    // Refresh alerts every 5 minutes
-    const interval = setInterval(fetchAlertsCount, 5 * 60 * 1000);
+    // Refresh alerts every minute
+    const interval = setInterval(fetchAlertsCount, 60 * 1000);
     return () => clearInterval(interval);
-  }, [user?.companyId, isSuperAdmin]);
+  }, [user?.companyId, user?.id, isSuperAdmin]);
 
   const handleLogoutRequest = () => {
     setShowLogoutModal(true);
