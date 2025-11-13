@@ -16,6 +16,7 @@ import Alertas from './pages/Alertas';
 import Empresa from './pages/Configuracoes/Empresa';
 import Perfis from './pages/Configuracoes/Perfis';
 import PerfilForm from './pages/Configuracoes/PerfilForm';
+import Atividades from './pages/Configuracoes/Atividades';
 import CategoriasFinanceiras from './pages/Cadastros/CategoriasFinanceiras';
 import Profile from './pages/Profile';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -98,6 +99,7 @@ const AppRoutes: React.FC = () => {
         <Route path="configuracoes/perfis" element={<Perfis />} />
         <Route path="configuracoes/perfis/novo" element={<PerfilForm />} />
         <Route path="configuracoes/perfis/:id" element={<PerfilForm />} />
+        <Route path="configuracoes/atividades" element={<Atividades />} />
         <Route path="profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -20,7 +20,8 @@ import {
   Bell,
   Building,
   Shield,
-  Calendar
+  Calendar,
+  Activity
 } from 'lucide-react';
 import { Can } from '../../contexts/AuthContext';
 
@@ -64,6 +65,7 @@ const menuItems = [
     submenu: [
       { path: '/configuracoes/empresa', icon: Building, label: 'Dados da Empresa', permission: 'configuracoes:gerenciar_empresa' },
       { path: '/configuracoes/perfis', icon: Shield, label: 'Perfis e Permissões', permission: 'usuarios:gerenciar_permissoes' },
+      { path: '/configuracoes/atividades', icon: Activity, label: 'Rastreamento', permission: 'configuracoes:ver_atividades' },
     ],
   },
 ];
