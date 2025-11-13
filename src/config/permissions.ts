@@ -41,6 +41,7 @@ export const permissionsMap = {
     label: 'Configurações',
     permissions: {
       'configuracoes:gerenciar_empresa': 'Gerenciar dados da empresa',
+      'configuracoes:ver_atividades': 'Visualizar rastreamento de atividades',
     },
   },
   dashboard: {
