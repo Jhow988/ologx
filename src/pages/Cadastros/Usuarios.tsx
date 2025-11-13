@@ -324,7 +324,8 @@ const Usuarios: React.FC = () => {
   };
 
   const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchTerm.toLowerCase())
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    u.status !== 'inactive' // Ocultar usuários inativos
   );
 
   const getRoleColor = (role: string) => {
