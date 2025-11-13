@@ -31,8 +31,30 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
+  const [readAlerts, setReadAlerts] = useState<Set<string>>(new Set());
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchReadAlerts = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from('read_alerts')
+        .select('alert_id')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error fetching read alerts:', error);
+        return;
+      }
+
+      const readIds = new Set(data?.map((r: any) => r.alert_id) || []);
+      setReadAlerts(readIds);
+    } catch (error) {
+      console.error('Error fetching read alerts:', error);
+    }
+  }, [user?.id]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!user?.companyId) {
@@ -163,8 +185,12 @@ const Dashboard: React.FC = () => {
     }
 
     setMonthlyData(monthlyFinancialData);
+
+    // Fetch read alerts to filter out read ones
+    await fetchReadAlerts();
+
     setLoading(false);
-  }, [user?.companyId]);
+  }, [user?.companyId, fetchReadAlerts]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -406,7 +432,7 @@ const Dashboard: React.FC = () => {
         </Card>
         <Card title="Alertas Importantes">
           <div className="space-y-2 md:space-y-3">
-            {alerts.length > 0 ? alerts.map(alert => (
+            {alerts.filter(alert => !readAlerts.has(alert.id)).length > 0 ? alerts.filter(alert => !readAlerts.has(alert.id)).map(alert => (
               <div key={alert.id} className="flex items-start gap-2 md:gap-3 p-3 md:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800/30">
                 <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
