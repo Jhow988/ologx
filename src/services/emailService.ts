@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
 import type { Trip, Client, Attachment } from '../types';
 
-const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
+// Inicializar Resend apenas se a chave existir
+const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 interface SendTripAttachmentsParams {
   trip: Trip;
@@ -134,6 +136,11 @@ export async function sendTripAttachments({
 </body>
 </html>
   `;
+
+  // Verificar se o Resend está configurado
+  if (!resend) {
+    throw new Error('Serviço de email não configurado. Configure a variável VITE_RESEND_API_KEY.');
+  }
 
   try {
     const { data, error } = await resend.emails.send({
