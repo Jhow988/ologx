@@ -73,6 +73,18 @@ export function useClients() {
         throw new Error(error.message || 'Erro desconhecido');
       }
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'create',
+        p_entity_type: 'client',
+        p_entity_id: data.id,
+        p_details: {
+          name: data.name,
+          email: data.email,
+          phone: data.phone
+        }
+      });
+
       toast.success('Cliente criado com sucesso!');
       await fetchClients(); // Atualiza a lista
       return data;
@@ -95,6 +107,17 @@ export function useClients() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'update',
+        p_entity_type: 'client',
+        p_entity_id: data.id,
+        p_details: {
+          updated_fields: Object.keys(clientData),
+          name: data.name
+        }
+      });
+
       toast.success('Cliente atualizado com sucesso!');
       await fetchClients(); // Atualiza a lista
       return data;
@@ -108,12 +131,29 @@ export function useClients() {
   // Deletar cliente
   const deleteClient = async (id: string) => {
     try {
+      // Get client data before deleting for logging
+      const clientToDelete = await getClientById(id);
+
       const { error } = await supabase
         .from('clients')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Log activity
+      if (clientToDelete) {
+        await supabase.rpc('log_activity', {
+          p_action: 'delete',
+          p_entity_type: 'client',
+          p_entity_id: id,
+          p_details: {
+            name: clientToDelete.name,
+            email: clientToDelete.email,
+            phone: clientToDelete.phone
+          }
+        });
+      }
 
       toast.success('Cliente excluído com sucesso!');
       await fetchClients(); // Atualiza a lista

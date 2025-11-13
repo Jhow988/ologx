@@ -122,6 +122,19 @@ const Manutencao: React.FC = () => {
         if (newStatus === 'in_progress' && oldStatus !== 'in_progress') vehicleStatusUpdate = { status: 'maintenance' };
         else if (newStatus === 'completed' && oldStatus === 'in_progress') vehicleStatusUpdate = { status: 'active' };
 
+        // Log activity
+        await supabase.rpc('log_activity', {
+          p_action: 'update',
+          p_entity_type: 'maintenance',
+          p_entity_id: modalState.maintenance.id,
+          p_details: {
+            title: maintenanceData.title,
+            status: maintenanceData.status,
+            type: maintenanceData.type,
+            updated_fields: Object.keys(maintenanceData)
+          }
+        });
+
         toast.success('Manutenção atualizada com sucesso!');
       } else {
         const { data, error } = await supabase.from('maintenances').insert(dataToSave).select();
@@ -136,6 +149,21 @@ const Manutencao: React.FC = () => {
         }
 
         if (newStatus === 'in_progress') vehicleStatusUpdate = { status: 'maintenance' };
+
+        // Log activity
+        if (data && data.length > 0) {
+          await supabase.rpc('log_activity', {
+            p_action: 'create',
+            p_entity_type: 'maintenance',
+            p_entity_id: data[0].id,
+            p_details: {
+              title: maintenanceData.title,
+              status: maintenanceData.status,
+              type: maintenanceData.type,
+              cost: maintenanceData.cost
+            }
+          });
+        }
 
         toast.success('Manutenção criada com sucesso!');
       }

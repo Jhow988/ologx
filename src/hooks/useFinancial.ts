@@ -208,6 +208,19 @@ export function useFinancial() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'create',
+        p_entity_type: 'financial',
+        p_entity_id: data.id,
+        p_details: {
+          description: data.description,
+          amount: data.amount,
+          type: data.type,
+          status: data.status
+        }
+      });
+
       toast.success('Lançamento criado com sucesso!');
       await fetchRecords();
       return data;
@@ -229,6 +242,18 @@ export function useFinancial() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'update',
+        p_entity_type: 'financial',
+        p_entity_id: data.id,
+        p_details: {
+          updated_fields: Object.keys(recordData),
+          description: data.description,
+          status: data.status
+        }
+      });
+
       toast.success('Lançamento atualizado com sucesso!');
       await fetchRecords();
       return data;
@@ -241,12 +266,35 @@ export function useFinancial() {
 
   const deleteRecord = async (id: string) => {
     try {
+      // Get record data before deleting for logging
+      const { data: recordToDelete, error: fetchError } = await supabase
+        .from('financial_records')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('financial_records')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Log activity
+      if (recordToDelete) {
+        await supabase.rpc('log_activity', {
+          p_action: 'delete',
+          p_entity_type: 'financial',
+          p_entity_id: id,
+          p_details: {
+            description: recordToDelete.description,
+            amount: recordToDelete.amount,
+            type: recordToDelete.type
+          }
+        });
+      }
 
       toast.success('Lançamento excluído com sucesso!');
       await fetchRecords();

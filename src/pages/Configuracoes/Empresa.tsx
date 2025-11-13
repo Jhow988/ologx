@@ -150,6 +150,17 @@ const Empresa: React.FC = () => {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'update',
+        p_entity_type: 'company',
+        p_entity_id: user.companyId,
+        p_details: {
+          name: settings.name,
+          updated_fields: Object.keys(settings)
+        }
+      });
+
       setShowSuccess(true);
       toast.success('Dados da empresa atualizados com sucesso!');
       setTimeout(() => setShowSuccess(false), 3000);

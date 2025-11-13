@@ -79,6 +79,19 @@ export function useTrips() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'create',
+        p_entity_type: 'trip',
+        p_entity_id: data.id,
+        p_details: {
+          origin: data.origin,
+          destination: data.destination,
+          status: data.status,
+          freight_value: data.freight_value
+        }
+      });
+
       toast.success('Viagem criada com sucesso!');
       await fetchTrips();
       return data;
@@ -102,6 +115,19 @@ export function useTrips() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'update',
+        p_entity_type: 'trip',
+        p_entity_id: data.id,
+        p_details: {
+          updated_fields: Object.keys(tripData),
+          origin: data.origin,
+          destination: data.destination,
+          status: data.status
+        }
+      });
+
       toast.success('Viagem atualizada com sucesso!');
       await fetchTrips();
       return data;
@@ -115,12 +141,29 @@ export function useTrips() {
   // Deletar viagem
   const deleteTrip = async (id: string) => {
     try {
+      // Get trip data before deleting for logging
+      const tripToDelete = await getTripById(id);
+
       const { error } = await supabase
         .from('trips')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Log activity
+      if (tripToDelete) {
+        await supabase.rpc('log_activity', {
+          p_action: 'delete',
+          p_entity_type: 'trip',
+          p_entity_id: id,
+          p_details: {
+            origin: tripToDelete.origin,
+            destination: tripToDelete.destination,
+            status: tripToDelete.status
+          }
+        });
+      }
 
       toast.success('Viagem excluída com sucesso!');
       await fetchTrips();

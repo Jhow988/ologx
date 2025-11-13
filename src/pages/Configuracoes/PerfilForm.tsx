@@ -108,18 +108,44 @@ const PerfilForm: React.FC = () => {
           .eq('id', id);
 
         if (error) throw error;
+
+        // Log activity
+        await supabase.rpc('log_activity', {
+          p_action: 'update',
+          p_entity_type: 'profile',
+          p_entity_id: id,
+          p_details: {
+            name: formData.name,
+            permissions_count: formData.permissions.length
+          }
+        });
+
         toast.success('Perfil atualizado com sucesso!');
       } else {
         // Create new role
-        const { error } = await supabase.from('custom_roles').insert({
+        const { data, error } = await supabase.from('custom_roles').insert({
           company_id: user.companyId,
           name: formData.name,
           description: formData.description,
           permissions: formData.permissions,
           is_custom: true,
-        });
+        }).select();
 
         if (error) throw error;
+
+        // Log activity
+        if (data && data.length > 0) {
+          await supabase.rpc('log_activity', {
+            p_action: 'create',
+            p_entity_type: 'profile',
+            p_entity_id: data[0].id,
+            p_details: {
+              name: formData.name,
+              permissions_count: formData.permissions.length
+            }
+          });
+        }
+
         toast.success('Perfil criado com sucesso!');
       }
 

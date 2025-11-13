@@ -489,6 +489,15 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      log_activity: {
+        Args: {
+          p_action: string
+          p_entity_type: string
+          p_entity_id?: string
+          p_details?: Json
+        }
+        Returns: void
+      }
     }
     Enums: {
       [_ in never]: never

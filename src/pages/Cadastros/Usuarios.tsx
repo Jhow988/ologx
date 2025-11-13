@@ -169,6 +169,18 @@ const Usuarios: React.FC = () => {
 
       console.log('Profile criado/atualizado com sucesso');
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'create',
+        p_entity_type: 'user',
+        p_entity_id: createData.user!.id,
+        p_details: {
+          name: fullName,
+          email: email,
+          role: role
+        }
+      });
+
       // Usuário criado com sucesso, status é ativo
       toast.success(
         `Usuário ${fullName} criado com sucesso!`,
@@ -201,6 +213,18 @@ const Usuarios: React.FC = () => {
         console.error("Error updating user:", error);
         toast.error('Erro ao atualizar usuário');
       } else {
+        // Log activity
+        await supabase.rpc('log_activity', {
+          p_action: 'update',
+          p_entity_type: 'user',
+          p_entity_id: modalState.user.id,
+          p_details: {
+            name: userData.name,
+            role: userData.role,
+            updated_fields: Object.keys(userData)
+          }
+        });
+
         toast.success('Usuário atualizado com sucesso!');
       }
     }

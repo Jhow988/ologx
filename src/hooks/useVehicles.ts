@@ -58,6 +58,19 @@ export function useVehicles() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'create',
+        p_entity_type: 'vehicle',
+        p_entity_id: data.id,
+        p_details: {
+          plate: data.plate,
+          model: data.model,
+          brand: data.brand,
+          type: data.type
+        }
+      });
+
       toast.success('Veículo criado com sucesso!');
       await fetchVehicles();
       return data;
@@ -81,6 +94,17 @@ export function useVehicles() {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_action: 'update',
+        p_entity_type: 'vehicle',
+        p_entity_id: data.id,
+        p_details: {
+          updated_fields: Object.keys(vehicleData),
+          plate: data.plate
+        }
+      });
+
       toast.success('Veículo atualizado com sucesso!');
       await fetchVehicles();
       return data;
@@ -94,12 +118,29 @@ export function useVehicles() {
   // Deletar veículo
   const deleteVehicle = async (id: string) => {
     try {
+      // Get vehicle data before deleting for logging
+      const vehicleToDelete = await getVehicleById(id);
+
       const { error } = await supabase
         .from('vehicles')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Log activity
+      if (vehicleToDelete) {
+        await supabase.rpc('log_activity', {
+          p_action: 'delete',
+          p_entity_type: 'vehicle',
+          p_entity_id: id,
+          p_details: {
+            plate: vehicleToDelete.plate,
+            model: vehicleToDelete.model,
+            brand: vehicleToDelete.brand
+          }
+        });
+      }
 
       toast.success('Veículo excluído com sucesso!');
       await fetchVehicles();
