@@ -84,13 +84,12 @@ const NovoServico: React.FC = () => {
     })
   };
 
-  // Buscar motoristas - VERSÃO SIMPLIFICADA SEM FILTRO DE STATUS
+  // Buscar motoristas - VERSÃO TEMPORÁRIA: PEGAR TODOS OS USUÁRIOS
   useEffect(() => {
     const fetchDrivers = async () => {
       console.log('=== INICIANDO BUSCA DE MOTORISTAS ===');
       console.log('user:', user);
       console.log('user.companyId:', user?.companyId);
-      console.log('user.id:', user?.id);
 
       if (!user?.companyId) {
         console.log('ABORTADO: Sem companyId');
@@ -101,88 +100,63 @@ const NovoServico: React.FC = () => {
       try {
         console.log('Executando query no Supabase...');
 
-        // PRIMEIRA TENTATIVA: Buscar TODOS os profiles da empresa (sem filtro de role)
-        const { data: allProfiles, error: allError } = await supabase
-          .from('profiles')
-          .select('id, full_name, role, status')
-          .eq('company_id', user.companyId);
-
-        console.log('TODOS OS PROFILES DA EMPRESA:');
-        console.log('Error:', allError);
-        console.log('Data:', allProfiles);
-        console.log('Count:', allProfiles?.length);
-
-        if (allError) {
-          console.error('ERRO ao buscar todos profiles:', allError);
-          console.error('Error details:', JSON.stringify(allError, null, 2));
-        }
-
-        // SEGUNDA TENTATIVA: Buscar apenas motoristas
-        console.log('\nBuscando apenas role=driver...');
+        // BUSCAR TODOS OS PROFILES (para debug - vamos filtrar manualmente)
         const { data, error } = await supabase
           .from('profiles')
           .select('id, full_name, role, status')
           .eq('company_id', user.companyId)
-          .eq('role', 'driver');
+          .eq('is_super_admin', false);
 
-        console.log('Query de motoristas concluída');
+        console.log('Query concluída');
         console.log('Error:', error);
-        console.log('Data:', data);
-        console.log('Data length:', data?.length);
+        console.log('Data completa:', data);
+        console.log('Total de profiles:', data?.length);
 
         if (error) {
-          console.error('ERRO ao buscar motoristas:', error);
-          console.error('Error details:', JSON.stringify(error, null, 2));
+          console.error('ERRO ao buscar profiles:', error);
           setDrivers([]);
           return;
         }
 
         if (!data || data.length === 0) {
-          console.warn('ATENÇÃO: Query retornou vazia!');
-          console.warn('Verifique se:');
-          console.warn('1. Existem registros com role="driver" no banco');
-          console.warn('2. As políticas RLS permitem acesso');
-          console.warn('3. O company_id está correto');
+          console.warn('ATENÇÃO: Nenhum profile encontrado para esta empresa!');
           setDrivers([]);
           return;
         }
 
-        console.log('Motoristas retornados do banco:');
-        (data || []).forEach((d, i) => {
-          console.log(`  [${i}] id=${d.id}, name=${d.full_name}, role=${d.role}, status=${d.status}`);
+        // Logar TODOS os profiles para debug
+        console.log('\n=== TODOS OS PROFILES DA EMPRESA ===');
+        data.forEach((d, i) => {
+          console.log(`[${i}] Nome: ${d.full_name}`);
+          console.log(`     Role: '${d.role}' (length=${d.role?.length})`);
+          console.log(`     Status: '${d.status}'`);
+          console.log(`     ID: ${d.id}`);
         });
 
-        // NÃO FILTRAR POR STATUS - pegar todos os motoristas
-        console.log('Mapeando TODOS os motoristas (sem filtro de status)...');
-        const mappedDrivers = (data || []).map(d => {
-          const mapped = {
-            id: d.id,
-            companyId: user.companyId,
-            name: d.full_name,
-            email: '', // Not needed for dropdown, but required by type
-            role: d.role as 'driver',
-            status: (d.status || 'active') as 'active',
-            isSuperAdmin: false
-          };
-          console.log('Mapped driver:', mapped);
-          return mapped;
-        }) as User[];
+        // MAPEAR TODOS COMO MOTORISTAS TEMPORARIAMENTE (para testar se o problema é o filtro)
+        console.log('\n=== MAPEANDO TODOS OS USUÁRIOS COMO MOTORISTAS (TEMPORÁRIO) ===');
+        const mappedDrivers = data.map(d => ({
+          id: d.id,
+          companyId: user.companyId,
+          name: d.full_name || 'Sem Nome',
+          email: '',
+          role: 'driver' as const,
+          status: 'active' as const,
+          isSuperAdmin: false
+        })) as User[];
 
-        console.log('Motoristas mapeados (total):', mappedDrivers.length);
-        console.log('Array final:', mappedDrivers);
+        console.log(`Total de usuários mapeados: ${mappedDrivers.length}`);
         console.log('Chamando setDrivers...');
         setDrivers(mappedDrivers);
-        console.log('setDrivers chamado com sucesso');
-        console.log('=== FIM DA BUSCA DE MOTORISTAS ===');
+        console.log('=== FIM DA BUSCA ===');
       } catch (err) {
-        console.error('EXCEPTION ao buscar motoristas:', err);
-        console.error('Exception stack:', err);
+        console.error('EXCEPTION:', err);
         setDrivers([]);
       }
     };
 
     fetchDrivers();
-  }, [user?.companyId, user?.id]);
+  }, [user?.companyId]);
 
   // Log drivers state quando mudar
   useEffect(() => {
