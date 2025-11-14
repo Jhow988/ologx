@@ -8,7 +8,7 @@ type Vehicle = Database['public']['Tables']['vehicles']['Row'];
 type VehicleInsert = Database['public']['Tables']['vehicles']['Insert'];
 type VehicleUpdate = Database['public']['Tables']['vehicles']['Update'];
 
-export function useVehicles() {
+export function useVehicles(filterByStatus: 'all' | 'active' | 'inactive' = 'all') {
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,11 +22,17 @@ export function useVehicles() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('vehicles')
         .select('*')
-        .eq('company_id', user.companyId)
-        .order('created_at', { ascending: false });
+        .eq('company_id', user.companyId);
+
+      // Apply status filter if specified
+      if (filterByStatus !== 'all') {
+        query = query.eq('status', filterByStatus);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -172,7 +178,7 @@ export function useVehicles() {
 
   useEffect(() => {
     fetchVehicles();
-  }, [user?.companyId]);
+  }, [user?.companyId, filterByStatus]);
 
   return {
     vehicles,

@@ -45,8 +45,8 @@ const Alertas: React.FC = () => {
     setLoading(true);
 
     const [vehiclesRes, driversRes] = await Promise.all([
-      supabase.from('vehicles').select('id, plate, licensing_due_date').eq('company_id', user.companyId),
-      supabase.from('profiles').select('id, full_name, cnh_due_date').eq('company_id', user.companyId).not('cnh_due_date', 'is', null)
+      supabase.from('vehicles').select('id, plate, licensing_due_date').eq('company_id', user.companyId).eq('status', 'active'),
+      supabase.from('profiles').select('id, full_name, cnh_due_date').eq('company_id', user.companyId).eq('status', 'active').not('cnh_due_date', 'is', null)
     ]);
 
     const generatedAlerts: SystemAlert[] = [];

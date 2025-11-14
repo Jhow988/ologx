@@ -46,7 +46,7 @@ const Manutencao: React.FC = () => {
 
     const [maintenancesRes, vehiclesRes] = await Promise.all([
       supabase.from('maintenances').select('*, vehicle:vehicles(plate, model)').eq('company_id', user.companyId).order('start_date', { ascending: false }),
-      supabase.from('vehicles').select('*').eq('company_id', user.companyId)
+      supabase.from('vehicles').select('*').eq('company_id', user.companyId).eq('status', 'active')
     ]);
 
     if (maintenancesRes.error) console.error('Error fetching maintenances:', maintenancesRes.error);

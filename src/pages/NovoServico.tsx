@@ -20,7 +20,7 @@ const NovoServico: React.FC = () => {
   const { user } = useAuth();
   const { createTrip } = useTrips();
   const { clients } = useClients();
-  const { vehicles } = useVehicles();
+  const { vehicles } = useVehicles('active');
   const [drivers, setDrivers] = useState<User[]>([]);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
 

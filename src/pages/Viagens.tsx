@@ -20,7 +20,7 @@ const Viagens: React.FC = () => {
   const { user } = useAuth();
   const { trips: rawTrips, loading: tripsLoading, createTrip, updateTrip } = useTrips();
   const { clients } = useClients();
-  const { vehicles } = useVehicles();
+  const { vehicles } = useVehicles('active');
   const [drivers, setDrivers] = useState<User[]>([]);
   const [companyName, setCompanyName] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');

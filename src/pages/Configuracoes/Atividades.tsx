@@ -37,8 +37,9 @@ const Atividades: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, status')
         .eq('company_id', user.companyId)
+        .eq('status', 'active') // Apenas usuários ativos
         .order('full_name');
 
       if (error) throw error;

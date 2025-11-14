@@ -21,7 +21,7 @@ const EditarServico: React.FC = () => {
   const { user } = useAuth();
   const { trips: rawTrips, updateTrip } = useTrips();
   const { clients } = useClients();
-  const { vehicles } = useVehicles();
+  const { vehicles } = useVehicles('active');
   const [drivers, setDrivers] = useState<User[]>([]);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [loading, setLoading] = useState(true);

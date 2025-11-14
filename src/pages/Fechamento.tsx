@@ -93,8 +93,8 @@ const Fechamento: React.FC = () => {
       const [tripsRes, clientsRes, vehiclesRes, driversRes, currentCompanyRes] = await Promise.all([
         tripsQuery,
         supabase.from('clients').select('id, name, city').eq('company_id', user.companyId).order('name'),
-        supabase.from('vehicles').select('id, plate, model').eq('company_id', user.companyId),
-        supabase.from('profiles').select('id, full_name').eq('company_id', user.companyId).not('cnh_due_date', 'is', null),
+        supabase.from('vehicles').select('id, plate, model').eq('company_id', user.companyId).eq('status', 'active'),
+        supabase.from('profiles').select('id, full_name').eq('company_id', user.companyId).eq('status', 'active').not('cnh_due_date', 'is', null),
         supabase.from('companies').select('name').eq('id', user.companyId).single()
       ]);
 
