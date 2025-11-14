@@ -319,14 +319,14 @@ const Atividades: React.FC = () => {
                   {/* Conteúdo Expandido */}
                   {isExpanded && detailItems.length > 0 && (
                     <div className="px-4 pb-4 border-t border-gray-200 dark:border-dark-border pt-3">
-                      <h4 className="text-xs font-semibold text-gray-700 dark:text-dark-text-secondary mb-2 uppercase">
+                      <h4 className="text-xs font-semibold text-gray-700 dark:text-dark-text mb-2 uppercase">
                         Detalhes da Atividade
                       </h4>
-                      <div className="bg-white dark:bg-dark-card rounded-lg p-3 space-y-1.5">
+                      <div className="bg-white dark:bg-dark-surface rounded-lg p-3 space-y-1.5 border border-gray-200 dark:border-dark-border">
                         {detailItems.map((item, index) => (
-                          <div key={index} className="text-sm text-gray-700 dark:text-dark-text flex items-start gap-2">
-                            <span className="text-primary">•</span>
-                            <span>{item}</span>
+                          <div key={index} className="text-sm text-gray-800 dark:text-gray-200 flex items-start gap-2">
+                            <span className="text-primary flex-shrink-0">•</span>
+                            <span className="flex-1">{item}</span>
                           </div>
                         ))}
                       </div>
