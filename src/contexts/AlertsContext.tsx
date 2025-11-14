@@ -57,12 +57,12 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-      // Fetch vehicles with licensing due in 30 days (only active)
+      // Fetch vehicles with licensing due in 30 days (only active, not inactive)
       const { data: vehicles, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('id, licensing_due_date')
         .eq('company_id', user.companyId)
-        .eq('status', 'active');
+        .neq('status', 'inactive');
 
       if (vehiclesError) {
         console.error('Error fetching vehicles:', vehiclesError);

@@ -28,8 +28,11 @@ export function useVehicles(filterByStatus: 'all' | 'active' | 'inactive' = 'all
         .eq('company_id', user.companyId);
 
       // Apply status filter if specified
-      if (filterByStatus !== 'all') {
-        query = query.eq('status', filterByStatus);
+      if (filterByStatus === 'active') {
+        // Filter out inactive vehicles (show available, in_use, maintenance)
+        query = query.neq('status', 'inactive');
+      } else if (filterByStatus === 'inactive') {
+        query = query.eq('status', 'inactive');
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
