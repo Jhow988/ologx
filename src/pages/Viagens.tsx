@@ -164,6 +164,11 @@ const Viagens: React.FC = () => {
       return;
     }
 
+    console.log('=== INICIANDO ENVIO DE EMAIL ===');
+    console.log('Cliente:', client.name, '- Email:', client.email);
+    console.log('Número de anexos:', trip.attachments.length);
+    console.log('Anexos:', trip.attachments.map(a => ({ name: a.name, url: a.url })));
+
     setSendingEmail(true);
     try {
       // Enviar email via Resend
@@ -179,11 +184,27 @@ const Viagens: React.FC = () => {
         email_sent_at: new Date().toISOString()
       });
 
-      toast.success(`Email enviado com sucesso para ${client.email}`);
+      toast.success(`Email enviado com sucesso para ${client.email}`, { duration: 5000 });
       closeModal();
     } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      toast.error('Erro ao enviar email. Tente novamente.');
+      console.error('=== ERRO AO ENVIAR EMAIL ===');
+      console.error('Tipo do erro:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('Mensagem completa:', error);
+
+      let errorMessage = 'Erro ao enviar email. Tente novamente.';
+
+      if (error instanceof Error) {
+        // Verificar tipos específicos de erro
+        if (error.message.includes('não configurado') || error.message.includes('VITE_RESEND_API_KEY')) {
+          errorMessage = '⚠️ Serviço de email não configurado. Entre em contato com o suporte.';
+        } else if (error.message.includes('Resend')) {
+          errorMessage = `⚠️ Erro no serviço de email: ${error.message}`;
+        } else {
+          errorMessage = `❌ Erro: ${error.message}`;
+        }
+      }
+
+      toast.error(errorMessage, { duration: 7000 });
     } finally {
       setSendingEmail(false);
     }

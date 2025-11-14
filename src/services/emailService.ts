@@ -3,6 +3,8 @@ import type { Trip, Client, Attachment } from '../types';
 
 // Inicializar Resend apenas se a chave existir
 const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
+console.log('🔑 [INIT] VITE_RESEND_API_KEY:', resendApiKey ? `${resendApiKey.substring(0, 10)}...` : 'NÃO ENCONTRADA');
+console.log('🔑 [INIT] Todas env vars:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')));
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 interface SendTripAttachmentsParams {
@@ -16,9 +18,16 @@ export async function sendTripAttachments({
   client,
   companyName,
 }: SendTripAttachmentsParams): Promise<void> {
+  console.log('📧 [emailService] Iniciando sendTripAttachments');
+  console.log('📧 [emailService] Cliente:', client.name, client.email);
+  console.log('📧 [emailService] Empresa:', companyName);
+
   if (!trip.attachments || trip.attachments.length === 0) {
+    console.error('📧 [emailService] Erro: Nenhum anexo disponível');
     throw new Error('Nenhum anexo disponível para envio');
   }
+
+  console.log('📧 [emailService] Número de anexos:', trip.attachments.length);
 
   // Preparar lista de anexos
   const attachmentsList = trip.attachments
@@ -31,6 +40,7 @@ export async function sendTripAttachments({
   // Preparar links de download
   const attachmentLinks = trip.attachments
     .map((att: Attachment, index: number) => {
+      console.log(`📧 [emailService] Anexo ${index + 1}:`, att.name, '- URL:', att.url);
       return `<tr>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">
           <strong>${index + 1}.</strong> ${att.name}
@@ -138,11 +148,21 @@ export async function sendTripAttachments({
   `;
 
   // Verificar se o Resend está configurado
+  console.log('📧 [emailService] Verificando configuração Resend...');
+  console.log('📧 [emailService] API Key presente:', !!resendApiKey);
+  console.log('📧 [emailService] Resend instance:', !!resend);
+
   if (!resend) {
+    console.error('📧 [emailService] ERRO: Resend não configurado!');
     throw new Error('Serviço de email não configurado. Configure a variável VITE_RESEND_API_KEY.');
   }
 
   try {
+    console.log('📧 [emailService] Preparando envio de email...');
+    console.log('📧 [emailService] De: OLogX <onboarding@resend.dev>');
+    console.log('📧 [emailService] Para:', [client.email]);
+    console.log('📧 [emailService] Assunto:', `Anexos de Viagem - ${trip.origin} → ${trip.destination}`);
+
     const { data, error } = await resend.emails.send({
       from: 'OLogX <onboarding@resend.dev>', // Você deve substituir por seu domínio verificado
       to: [client.email],
@@ -151,13 +171,17 @@ export async function sendTripAttachments({
     });
 
     if (error) {
-      console.error('Erro ao enviar email via Resend:', error);
-      throw new Error(error.message || 'Erro ao enviar email');
+      console.error('📧 [emailService] ERRO da API Resend:', error);
+      console.error('📧 [emailService] Tipo do erro:', typeof error);
+      console.error('📧 [emailService] Detalhes:', JSON.stringify(error, null, 2));
+      throw new Error(error.message || 'Erro ao enviar email via Resend');
     }
 
-    console.log('Email enviado com sucesso:', data);
+    console.log('📧 [emailService] ✅ Email enviado com sucesso!');
+    console.log('📧 [emailService] Response data:', data);
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
+    console.error('📧 [emailService] ERRO no try/catch:', error);
+    console.error('📧 [emailService] Stack trace:', error instanceof Error ? error.stack : 'N/A');
     throw error;
   }
 }
