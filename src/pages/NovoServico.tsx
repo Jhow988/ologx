@@ -98,10 +98,10 @@ const NovoServico: React.FC = () => {
           console.error('Erro ao buscar custom roles:', rolesError);
         }
 
-        // Buscar todos os profiles da empresa (exceto super admin)
+        // Buscar todos os profiles da empresa (exceto super admin) COM cnh_categories
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, role, status')
+          .select('id, full_name, role, status, cnh_categories')
           .eq('company_id', user.companyId)
           .eq('is_super_admin', false)
           .eq('status', 'active');
@@ -133,6 +133,7 @@ const NovoServico: React.FC = () => {
           email: '',
           role: 'driver' as const,
           status: d.status as 'active',
+          cnhCategories: d.cnh_categories || [],
           isSuperAdmin: false
         })) as User[];
 
@@ -145,6 +146,30 @@ const NovoServico: React.FC = () => {
 
     fetchDrivers();
   }, [user?.companyId]);
+
+  // Filtrar motoristas baseado na categoria CNH necessária do veículo selecionado
+  const availableDrivers = useMemo(() => {
+    if (!formData.vehicleId) {
+      return drivers; // Se nenhum veículo selecionado, mostrar todos motoristas
+    }
+
+    const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
+
+    // Se veículo não tem categoria CNH exigida, mostrar todos motoristas
+    if (!selectedVehicle?.required_cnh_category) {
+      return drivers;
+    }
+
+    // Filtrar apenas motoristas que possuem a categoria CNH necessária
+    return drivers.filter(driver => {
+      // Se motorista não tem categorias CNH, não pode dirigir este veículo
+      if (!driver.cnhCategories || driver.cnhCategories.length === 0) {
+        return false;
+      }
+      // Verificar se motorista tem a categoria necessária
+      return driver.cnhCategories.includes(selectedVehicle.required_cnh_category!);
+    });
+  }, [drivers, formData.vehicleId, vehicles]);
 
   // Buscar dados do CEP de origem
   useEffect(() => {
@@ -489,11 +514,16 @@ const NovoServico: React.FC = () => {
                   onChange={handleChange}
                   required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
-                  disabled={drivers.length === 0}
+                  disabled={availableDrivers.length === 0}
                 >
-                  <option value="">{drivers.length === 0 ? 'Nenhum motorista ativo disponível' : 'Selecione um motorista'}</option>
-                  {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
+                  <option value="">{availableDrivers.length === 0 ? 'Nenhum motorista habilitado disponível' : 'Selecione um motorista'}</option>
+                  {availableDrivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
                 </select>
+                {availableDrivers.length === 0 && drivers.length > 0 && formData.vehicleId && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    ⚠️ Este veículo requer CNH categoria {vehicles.find(v => v.id === formData.vehicleId)?.required_cnh_category}. Nenhum motorista possui esta habilitação.
+                  </p>
+                )}
                 {drivers.length === 0 && (
                   <p className="text-xs text-red-500 mt-1">⚠️ Não há motoristas ativos. Ative um motorista em Cadastros → Usuários</p>
                 )}
