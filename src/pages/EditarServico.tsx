@@ -465,10 +465,14 @@ const EditarServico: React.FC = () => {
                   onChange={handleChange}
                   required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+                  disabled={vehicles.length === 0}
                 >
-                  <option value="">Selecione um veículo</option>
+                  <option value="">{vehicles.length === 0 ? 'Nenhum veículo ativo disponível' : 'Selecione um veículo'}</option>
                   {vehicles.map(vehicle => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate} - {vehicle.model}</option>)}
                 </select>
+                {vehicles.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">⚠️ Não há veículos ativos. Ative um veículo em Cadastros → Frota</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista *</label>
@@ -478,10 +482,14 @@ const EditarServico: React.FC = () => {
                   onChange={handleChange}
                   required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+                  disabled={drivers.length === 0}
                 >
-                  <option value="">Selecione um motorista</option>
+                  <option value="">{drivers.length === 0 ? 'Nenhum motorista ativo disponível' : 'Selecione um motorista'}</option>
                   {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
                 </select>
+                {drivers.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">⚠️ Não há motoristas ativos. Ative um motorista em Cadastros → Usuários</p>
+                )}
               </div>
             </div>
           </Card>
