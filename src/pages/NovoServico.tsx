@@ -45,6 +45,12 @@ const NovoServico: React.FC = () => {
     attachments: [] as any[],
   });
 
+  // Debug: Log vehicles
+  useEffect(() => {
+    console.log('Vehicles from hook:', vehicles);
+    console.log('Vehicles count:', vehicles.length);
+  }, [vehicles]);
+
   // Preparar opções para o react-select
   const clientOptions = clients.map(client => ({
     value: client.id,
@@ -93,6 +99,8 @@ const NovoServico: React.FC = () => {
       if (error) {
         console.error('Error fetching drivers:', error);
       } else {
+        console.log('Drivers fetched:', data);
+        console.log('Drivers count:', data?.length || 0);
         const mappedDrivers = (data || []).map(d => ({
           id: d.id,
           name: d.full_name,
