@@ -45,12 +45,6 @@ const NovoServico: React.FC = () => {
     attachments: [] as any[],
   });
 
-  // Debug: Log vehicles
-  useEffect(() => {
-    console.log('Vehicles from hook:', vehicles);
-    console.log('Vehicles count:', vehicles.length);
-  }, [vehicles]);
-
   // Preparar opções para o react-select
   const clientOptions = clients.map(client => ({
     value: client.id,
@@ -84,85 +78,73 @@ const NovoServico: React.FC = () => {
     })
   };
 
-  // Buscar motoristas - VERSÃO TEMPORÁRIA: PEGAR TODOS OS USUÁRIOS
+  // Buscar motoristas
   useEffect(() => {
     const fetchDrivers = async () => {
-      console.log('=== INICIANDO BUSCA DE MOTORISTAS ===');
-      console.log('user:', user);
-      console.log('user.companyId:', user?.companyId);
-
       if (!user?.companyId) {
-        console.log('ABORTADO: Sem companyId');
         setDrivers([]);
         return;
       }
 
       try {
-        console.log('Executando query no Supabase...');
+        // Buscar o ID do custom role "Motorista" primeiro
+        const { data: customRoles, error: rolesError } = await supabase
+          .from('custom_roles')
+          .select('id, name')
+          .eq('company_id', user.companyId)
+          .ilike('name', '%motorista%');
 
-        // BUSCAR TODOS OS PROFILES (para debug - vamos filtrar manualmente)
+        if (rolesError) {
+          console.error('Erro ao buscar custom roles:', rolesError);
+        }
+
+        // Buscar todos os profiles da empresa (exceto super admin)
         const { data, error } = await supabase
           .from('profiles')
           .select('id, full_name, role, status')
           .eq('company_id', user.companyId)
-          .eq('is_super_admin', false);
-
-        console.log('Query concluída');
-        console.log('Error:', error);
-        console.log('Data completa:', data);
-        console.log('Total de profiles:', data?.length);
+          .eq('is_super_admin', false)
+          .eq('status', 'active');
 
         if (error) {
-          console.error('ERRO ao buscar profiles:', error);
+          console.error('Erro ao buscar motoristas:', error);
           setDrivers([]);
           return;
         }
 
         if (!data || data.length === 0) {
-          console.warn('ATENÇÃO: Nenhum profile encontrado para esta empresa!');
           setDrivers([]);
           return;
         }
 
-        // Logar TODOS os profiles para debug
-        console.log('\n=== TODOS OS PROFILES DA EMPRESA ===');
-        data.forEach((d, i) => {
-          console.log(`[${i}] Nome: ${d.full_name}`);
-          console.log(`     Role: '${d.role}' (length=${d.role?.length})`);
-          console.log(`     Status: '${d.status}'`);
-          console.log(`     ID: ${d.id}`);
-        });
+        // Identificar quais são motoristas:
+        // 1. role = 'driver' (padrão do sistema) OU
+        // 2. role = UUID do custom role "Motorista"
+        const motoristaRoleId = customRoles?.[0]?.id;
+        const driversData = data.filter(d =>
+          d.role === 'driver' ||
+          (motoristaRoleId && d.role === motoristaRoleId)
+        );
 
-        // MAPEAR TODOS COMO MOTORISTAS TEMPORARIAMENTE (para testar se o problema é o filtro)
-        console.log('\n=== MAPEANDO TODOS OS USUÁRIOS COMO MOTORISTAS (TEMPORÁRIO) ===');
-        const mappedDrivers = data.map(d => ({
+        const mappedDrivers = driversData.map(d => ({
           id: d.id,
           companyId: user.companyId,
           name: d.full_name || 'Sem Nome',
           email: '',
           role: 'driver' as const,
-          status: 'active' as const,
+          status: d.status as 'active',
           isSuperAdmin: false
         })) as User[];
 
-        console.log(`Total de usuários mapeados: ${mappedDrivers.length}`);
-        console.log('Chamando setDrivers...');
         setDrivers(mappedDrivers);
-        console.log('=== FIM DA BUSCA ===');
       } catch (err) {
-        console.error('EXCEPTION:', err);
+        console.error('Erro ao buscar motoristas:', err);
         setDrivers([]);
       }
     };
 
     fetchDrivers();
   }, [user?.companyId]);
-
-  // Log drivers state quando mudar
-  useEffect(() => {
-    console.log('>>> ESTADO DRIVERS ATUALIZADO:', drivers);
-    console.log('>>> DRIVERS LENGTH:', drivers.length);
-  }, [drivers]);
 
   // Buscar dados do CEP de origem
   useEffect(() => {
@@ -510,14 +492,7 @@ const NovoServico: React.FC = () => {
                   disabled={drivers.length === 0}
                 >
                   <option value="">{drivers.length === 0 ? 'Nenhum motorista ativo disponível' : 'Selecione um motorista'}</option>
-                  {(() => {
-                    console.log('RENDERIZANDO DROPDOWN - drivers:', drivers);
-                    console.log('RENDERIZANDO DROPDOWN - drivers.length:', drivers.length);
-                    return drivers.map((driver, idx) => {
-                      console.log(`  Renderizando option [${idx}]:`, driver);
-                      return <option key={driver.id} value={driver.id}>{driver.name}</option>;
-                    });
-                  })()}
+                  {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
                 </select>
                 {drivers.length === 0 && (
                   <p className="text-xs text-red-500 mt-1">⚠️ Não há motoristas ativos. Ative um motorista em Cadastros → Usuários</p>

@@ -119,26 +119,47 @@ const EditarServico: React.FC = () => {
     const fetchDrivers = async () => {
       if (!user?.companyId) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, status')
-        .eq('company_id', user.companyId)
-        .eq('role', 'driver')
-        .eq('status', 'active');
+      try {
+        // Buscar o ID do custom role "Motorista" primeiro
+        const { data: customRoles } = await supabase
+          .from('custom_roles')
+          .select('id, name')
+          .eq('company_id', user.companyId)
+          .ilike('name', '%motorista%');
 
-      if (error) {
-        console.error('Error fetching drivers:', error);
-      } else {
-        const mappedDrivers = (data || []).map(d => ({
+        // Buscar todos os profiles ativos da empresa
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, status')
+          .eq('company_id', user.companyId)
+          .eq('is_super_admin', false)
+          .eq('status', 'active');
+
+        if (error) {
+          console.error('Error fetching drivers:', error);
+          return;
+        }
+
+        // Filtrar apenas motoristas (role = 'driver' OU custom role "Motorista")
+        const motoristaRoleId = customRoles?.[0]?.id;
+        const driversData = (data || []).filter(d =>
+          d.role === 'driver' ||
+          (motoristaRoleId && d.role === motoristaRoleId)
+        );
+
+        const mappedDrivers = driversData.map(d => ({
           id: d.id,
           companyId: user.companyId,
           name: d.full_name,
-          email: '', // Not needed for dropdown, but required by type
-          role: d.role as 'driver',
+          email: '',
+          role: 'driver' as const,
           status: d.status as 'active',
           isSuperAdmin: false
         })) as User[];
+
         setDrivers(mappedDrivers);
+      } catch (err) {
+        console.error('Erro ao buscar motoristas:', err);
       }
     };
 
