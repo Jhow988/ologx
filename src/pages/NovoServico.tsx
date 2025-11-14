@@ -412,13 +412,12 @@ const NovoServico: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Origem *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Origem</label>
                   <MaskedInput
                     mask="cep"
                     value={formData.originCep}
                     onChange={(value) => setFormData(prev => ({ ...prev, originCep: value }))}
                     placeholder="00000-000"
-                    required
                   />
                 </div>
                 <div>
@@ -435,13 +434,12 @@ const NovoServico: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Destino *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Destino</label>
                   <MaskedInput
                     mask="cep"
                     value={formData.destinationCep}
                     onChange={(value) => setFormData(prev => ({ ...prev, destinationCep: value }))}
                     placeholder="00000-000"
-                    required
                   />
                 </div>
                 <div>
