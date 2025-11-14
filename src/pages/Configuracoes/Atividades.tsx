@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import Card from '../../components/UI/Card';
-import { Loader, Activity, User, Calendar, Filter } from 'lucide-react';
+import { Loader, Activity, User, Calendar, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -24,6 +24,7 @@ const Atividades: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterUser, setFilterUser] = useState<string>('all');
   const [users, setUsers] = useState<any[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchActivities();
@@ -102,8 +103,89 @@ const Atividades: React.FC = () => {
       user: 'Usuário',
       financial: 'Registro Financeiro',
       maintenance: 'Manutenção',
+      company: 'Empresa',
+      profile: 'Perfil',
     };
     return labels[entityType] || entityType;
+  };
+
+  const formatDetails = (details: any, entityType: string, action: string) => {
+    if (!details) return [];
+
+    const items: string[] = [];
+
+    // Formatar detalhes específicos por tipo de entidade
+    switch (entityType) {
+      case 'vehicle':
+        if (details.plate) items.push(`Placa: ${details.plate}`);
+        if (details.model) items.push(`Modelo: ${details.model}`);
+        if (details.brand) items.push(`Marca: ${details.brand}`);
+        if (details.type) items.push(`Tipo: ${details.type}`);
+        break;
+
+      case 'client':
+        if (details.name) items.push(`Nome: ${details.name}`);
+        if (details.email) items.push(`Email: ${details.email}`);
+        if (details.phone) items.push(`Telefone: ${details.phone}`);
+        break;
+
+      case 'trip':
+        if (details.origin) items.push(`Origem: ${details.origin}`);
+        if (details.destination) items.push(`Destino: ${details.destination}`);
+        if (details.status) items.push(`Status: ${details.status}`);
+        if (details.freight_value) items.push(`Valor do Frete: R$ ${details.freight_value}`);
+        break;
+
+      case 'financial':
+        if (details.description) items.push(`Descrição: ${details.description}`);
+        if (details.amount) items.push(`Valor: R$ ${details.amount}`);
+        if (details.type) items.push(`Tipo: ${details.type === 'income' ? 'Receita' : 'Despesa'}`);
+        if (details.status) items.push(`Status: ${details.status}`);
+        break;
+
+      case 'maintenance':
+        if (details.title) items.push(`Título: ${details.title}`);
+        if (details.status) items.push(`Status: ${details.status}`);
+        if (details.type) items.push(`Tipo: ${details.type === 'preventive' ? 'Preventiva' : 'Corretiva'}`);
+        if (details.cost) items.push(`Custo: R$ ${details.cost}`);
+        break;
+
+      case 'user':
+        if (details.name) items.push(`Nome: ${details.name}`);
+        if (details.email) items.push(`Email: ${details.email}`);
+        if (details.role) items.push(`Função: ${details.role}`);
+        break;
+
+      case 'company':
+        if (details.name) items.push(`Nome: ${details.name}`);
+        break;
+
+      case 'profile':
+        if (details.name) items.push(`Nome do Perfil: ${details.name}`);
+        if (details.permissions_count) items.push(`Permissões: ${details.permissions_count}`);
+        break;
+    }
+
+    // Adicionar campos atualizados se for uma atualização
+    if (action === 'update' && details.updated_fields && Array.isArray(details.updated_fields)) {
+      const fieldLabels: Record<string, string> = {
+        name: 'Nome',
+        email: 'Email',
+        phone: 'Telefone',
+        plate: 'Placa',
+        model: 'Modelo',
+        brand: 'Marca',
+        status: 'Status',
+        description: 'Descrição',
+        amount: 'Valor',
+      };
+      const updatedFieldsList = details.updated_fields
+        .map((field: string) => fieldLabels[field] || field)
+        .join(', ');
+      items.push(`Campos alterados: ${updatedFieldsList}`);
+    }
+
+    return items;
   };
 
   const getActionColor = (action: string) => {
@@ -184,47 +266,75 @@ const Atividades: React.FC = () => {
       <Card title="Histórico de Atividades">
         {activities.length > 0 ? (
           <div className="space-y-3">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-dark-bg rounded-lg border border-gray-200 dark:border-dark-border hover:border-primary dark:hover:border-primary transition-colors"
-              >
-                <div className="flex-shrink-0">
-                  <div className={`p-2 rounded-full ${getActionColor(activity.action)}`}>
-                    <Activity className="h-5 w-5" />
-                  </div>
-                </div>
+            {activities.map((activity) => {
+              const isExpanded = expandedId === activity.id;
+              const detailItems = formatDetails(activity.details, activity.entity_type, activity.action);
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-dark-text">
-                      <span className="font-semibold">{activity.user_name}</span>
-                      {' '}
-                      <span className={`px-2 py-0.5 rounded text-xs ${getActionColor(activity.action)}`}>
-                        {getActionLabel(activity.action)}
-                      </span>
-                      {' '}
-                      {getEntityLabel(activity.entity_type)}
-                    </p>
+              return (
+                <div
+                  key={activity.id}
+                  className="bg-gray-50 dark:bg-dark-bg rounded-lg border border-gray-200 dark:border-dark-border hover:border-primary dark:hover:border-primary transition-colors overflow-hidden"
+                >
+                  {/* Cabeçalho do Acordeon */}
+                  <div
+                    className="flex items-center gap-4 p-4 cursor-pointer"
+                    onClick={() => setExpandedId(isExpanded ? null : activity.id)}
+                  >
+                    <div className="flex-shrink-0">
+                      <div className={`p-2 rounded-full ${getActionColor(activity.action)}`}>
+                        <Activity className="h-5 w-5" />
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-dark-text">
+                          <span className="font-semibold">{activity.user_name}</span>
+                          {' '}
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${getActionColor(activity.action)}`}>
+                            {getActionLabel(activity.action)}
+                          </span>
+                          {' '}
+                          {getEntityLabel(activity.entity_type)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex-shrink-0">
+                      {isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
                   </div>
 
-                  {activity.details && (
-                    <div className="text-xs text-gray-600 dark:text-dark-text-secondary mb-2">
-                      <pre className="whitespace-pre-wrap font-mono bg-gray-100 dark:bg-dark-border p-2 rounded">
-                        {JSON.stringify(activity.details, null, 2)}
-                      </pre>
+                  {/* Conteúdo Expandido */}
+                  {isExpanded && detailItems.length > 0 && (
+                    <div className="px-4 pb-4 border-t border-gray-200 dark:border-dark-border pt-3">
+                      <h4 className="text-xs font-semibold text-gray-700 dark:text-dark-text-secondary mb-2 uppercase">
+                        Detalhes da Atividade
+                      </h4>
+                      <div className="bg-white dark:bg-dark-card rounded-lg p-3 space-y-1.5">
+                        {detailItems.map((item, index) => (
+                          <div key={index} className="text-sm text-gray-700 dark:text-dark-text flex items-start gap-2">
+                            <span className="text-primary">•</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <Calendar className="h-3 w-3" />
-                    <span>
-                      {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">
