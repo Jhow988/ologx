@@ -84,73 +84,105 @@ const NovoServico: React.FC = () => {
     })
   };
 
-  // Buscar motoristas
+  // Buscar motoristas - VERSÃO SIMPLIFICADA SEM FILTRO DE STATUS
   useEffect(() => {
     const fetchDrivers = async () => {
       console.log('=== INICIANDO BUSCA DE MOTORISTAS ===');
+      console.log('user:', user);
       console.log('user.companyId:', user?.companyId);
+      console.log('user.id:', user?.id);
 
       if (!user?.companyId) {
         console.log('ABORTADO: Sem companyId');
+        setDrivers([]);
         return;
       }
 
-      console.log('Executando query no Supabase...');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, status')
-        .eq('company_id', user.companyId)
-        .eq('role', 'driver');
+      try {
+        console.log('Executando query no Supabase...');
 
-      console.log('Query concluída');
-      console.log('Error:', error);
-      console.log('Data:', data);
-      console.log('Data length:', data?.length);
+        // PRIMEIRA TENTATIVA: Buscar TODOS os profiles da empresa (sem filtro de role)
+        const { data: allProfiles, error: allError } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, status')
+          .eq('company_id', user.companyId);
 
-      if (error) {
-        console.error('ERRO ao buscar motoristas:', error);
-        return;
+        console.log('TODOS OS PROFILES DA EMPRESA:');
+        console.log('Error:', allError);
+        console.log('Data:', allProfiles);
+        console.log('Count:', allProfiles?.length);
+
+        if (allError) {
+          console.error('ERRO ao buscar todos profiles:', allError);
+          console.error('Error details:', JSON.stringify(allError, null, 2));
+        }
+
+        // SEGUNDA TENTATIVA: Buscar apenas motoristas
+        console.log('\nBuscando apenas role=driver...');
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, status')
+          .eq('company_id', user.companyId)
+          .eq('role', 'driver');
+
+        console.log('Query de motoristas concluída');
+        console.log('Error:', error);
+        console.log('Data:', data);
+        console.log('Data length:', data?.length);
+
+        if (error) {
+          console.error('ERRO ao buscar motoristas:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          setDrivers([]);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.warn('ATENÇÃO: Query retornou vazia!');
+          console.warn('Verifique se:');
+          console.warn('1. Existem registros com role="driver" no banco');
+          console.warn('2. As políticas RLS permitem acesso');
+          console.warn('3. O company_id está correto');
+          setDrivers([]);
+          return;
+        }
+
+        console.log('Motoristas retornados do banco:');
+        (data || []).forEach((d, i) => {
+          console.log(`  [${i}] id=${d.id}, name=${d.full_name}, role=${d.role}, status=${d.status}`);
+        });
+
+        // NÃO FILTRAR POR STATUS - pegar todos os motoristas
+        console.log('Mapeando TODOS os motoristas (sem filtro de status)...');
+        const mappedDrivers = (data || []).map(d => {
+          const mapped = {
+            id: d.id,
+            companyId: user.companyId,
+            name: d.full_name,
+            email: '', // Not needed for dropdown, but required by type
+            role: d.role as 'driver',
+            status: (d.status || 'active') as 'active',
+            isSuperAdmin: false
+          };
+          console.log('Mapped driver:', mapped);
+          return mapped;
+        }) as User[];
+
+        console.log('Motoristas mapeados (total):', mappedDrivers.length);
+        console.log('Array final:', mappedDrivers);
+        console.log('Chamando setDrivers...');
+        setDrivers(mappedDrivers);
+        console.log('setDrivers chamado com sucesso');
+        console.log('=== FIM DA BUSCA DE MOTORISTAS ===');
+      } catch (err) {
+        console.error('EXCEPTION ao buscar motoristas:', err);
+        console.error('Exception stack:', err);
+        setDrivers([]);
       }
-
-      console.log('Motoristas retornados do banco:');
-      (data || []).forEach((d, i) => {
-        console.log(`  [${i}] id=${d.id}, name=${d.full_name}, role=${d.role}, status=${d.status}`);
-      });
-
-      // Filter only active drivers
-      const activeDrivers = (data || []).filter(d => {
-        const isActive = d.status === 'active';
-        console.log(`  Motorista ${d.full_name}: status='${d.status}', isActive=${isActive}`);
-        return isActive;
-      });
-
-      console.log(`Total de motoristas ativos: ${activeDrivers.length}`);
-      console.log('Motoristas ativos:', activeDrivers);
-
-      const mappedDrivers = activeDrivers.map(d => {
-        const mapped = {
-          id: d.id,
-          companyId: user.companyId,
-          name: d.full_name,
-          email: '', // Not needed for dropdown, but required by type
-          role: d.role as 'driver',
-          status: d.status as 'active',
-          isSuperAdmin: false
-        };
-        console.log('Mapped driver:', mapped);
-        return mapped;
-      }) as User[];
-
-      console.log('Motoristas mapeados (total):', mappedDrivers.length);
-      console.log('Array final:', mappedDrivers);
-      console.log('Chamando setDrivers...');
-      setDrivers(mappedDrivers);
-      console.log('setDrivers chamado com sucesso');
-      console.log('=== FIM DA BUSCA DE MOTORISTAS ===');
     };
 
     fetchDrivers();
-  }, [user?.companyId]);
+  }, [user?.companyId, user?.id]);
 
   // Log drivers state quando mudar
   useEffect(() => {
