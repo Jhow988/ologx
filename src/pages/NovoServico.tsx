@@ -89,6 +89,15 @@ const NovoServico: React.FC = () => {
     const fetchDrivers = async () => {
       if (!user?.companyId) return;
 
+      // First, let's check ALL profiles to debug
+      const { data: allProfiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, status')
+        .eq('company_id', user.companyId);
+
+      console.log('ALL profiles:', allProfiles);
+      console.log('Profiles with driver role:', allProfiles?.filter(p => p.role === 'driver'));
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, role, status')
@@ -99,7 +108,7 @@ const NovoServico: React.FC = () => {
       if (error) {
         console.error('Error fetching drivers:', error);
       } else {
-        console.log('Drivers fetched:', data);
+        console.log('Drivers fetched (role=driver AND status=active):', data);
         console.log('Drivers count:', data?.length || 0);
         const mappedDrivers = (data || []).map(d => ({
           id: d.id,
