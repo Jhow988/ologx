@@ -87,22 +87,48 @@ const NovoServico: React.FC = () => {
   // Buscar motoristas
   useEffect(() => {
     const fetchDrivers = async () => {
-      if (!user?.companyId) return;
+      console.log('=== INICIANDO BUSCA DE MOTORISTAS ===');
+      console.log('user.companyId:', user?.companyId);
 
+      if (!user?.companyId) {
+        console.log('ABORTADO: Sem companyId');
+        return;
+      }
+
+      console.log('Executando query no Supabase...');
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, role, status')
         .eq('company_id', user.companyId)
         .eq('role', 'driver');
 
+      console.log('Query concluída');
+      console.log('Error:', error);
+      console.log('Data:', data);
+      console.log('Data length:', data?.length);
+
       if (error) {
-        console.error('Error fetching drivers:', error);
-      } else {
-        console.log('All drivers (role=driver):', data);
-        // Filter only active drivers
-        const activeDrivers = (data || []).filter(d => d.status === 'active');
-        console.log('Active drivers:', activeDrivers);
-        const mappedDrivers = activeDrivers.map(d => ({
+        console.error('ERRO ao buscar motoristas:', error);
+        return;
+      }
+
+      console.log('Motoristas retornados do banco:');
+      (data || []).forEach((d, i) => {
+        console.log(`  [${i}] id=${d.id}, name=${d.full_name}, role=${d.role}, status=${d.status}`);
+      });
+
+      // Filter only active drivers
+      const activeDrivers = (data || []).filter(d => {
+        const isActive = d.status === 'active';
+        console.log(`  Motorista ${d.full_name}: status='${d.status}', isActive=${isActive}`);
+        return isActive;
+      });
+
+      console.log(`Total de motoristas ativos: ${activeDrivers.length}`);
+      console.log('Motoristas ativos:', activeDrivers);
+
+      const mappedDrivers = activeDrivers.map(d => {
+        const mapped = {
           id: d.id,
           companyId: user.companyId,
           name: d.full_name,
@@ -110,13 +136,27 @@ const NovoServico: React.FC = () => {
           role: d.role as 'driver',
           status: d.status as 'active',
           isSuperAdmin: false
-        })) as User[];
-        setDrivers(mappedDrivers);
-      }
+        };
+        console.log('Mapped driver:', mapped);
+        return mapped;
+      }) as User[];
+
+      console.log('Motoristas mapeados (total):', mappedDrivers.length);
+      console.log('Array final:', mappedDrivers);
+      console.log('Chamando setDrivers...');
+      setDrivers(mappedDrivers);
+      console.log('setDrivers chamado com sucesso');
+      console.log('=== FIM DA BUSCA DE MOTORISTAS ===');
     };
 
     fetchDrivers();
   }, [user?.companyId]);
+
+  // Log drivers state quando mudar
+  useEffect(() => {
+    console.log('>>> ESTADO DRIVERS ATUALIZADO:', drivers);
+    console.log('>>> DRIVERS LENGTH:', drivers.length);
+  }, [drivers]);
 
   // Buscar dados do CEP de origem
   useEffect(() => {
@@ -464,7 +504,14 @@ const NovoServico: React.FC = () => {
                   disabled={drivers.length === 0}
                 >
                   <option value="">{drivers.length === 0 ? 'Nenhum motorista ativo disponível' : 'Selecione um motorista'}</option>
-                  {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
+                  {(() => {
+                    console.log('RENDERIZANDO DROPDOWN - drivers:', drivers);
+                    console.log('RENDERIZANDO DROPDOWN - drivers.length:', drivers.length);
+                    return drivers.map((driver, idx) => {
+                      console.log(`  Renderizando option [${idx}]:`, driver);
+                      return <option key={driver.id} value={driver.id}>{driver.name}</option>;
+                    });
+                  })()}
                 </select>
                 {drivers.length === 0 && (
                   <p className="text-xs text-red-500 mt-1">⚠️ Não há motoristas ativos. Ative um motorista em Cadastros → Usuários</p>
