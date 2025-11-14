@@ -131,9 +131,12 @@ const EditarServico: React.FC = () => {
       } else {
         const mappedDrivers = (data || []).map(d => ({
           id: d.id,
+          companyId: user.companyId,
           name: d.full_name,
-          role: d.role,
-          status: d.status
+          email: '', // Not needed for dropdown, but required by type
+          role: d.role as 'driver',
+          status: d.status as 'active',
+          isSuperAdmin: false
         })) as User[];
         setDrivers(mappedDrivers);
       }

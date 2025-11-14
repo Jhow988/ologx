@@ -89,32 +89,27 @@ const NovoServico: React.FC = () => {
     const fetchDrivers = async () => {
       if (!user?.companyId) return;
 
-      // First, let's check ALL profiles to debug
-      const { data: allProfiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, status')
-        .eq('company_id', user.companyId);
-
-      console.log('ALL profiles:', allProfiles);
-      console.log('Profiles with driver role:', allProfiles?.filter(p => p.role === 'driver'));
-
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, role, status')
         .eq('company_id', user.companyId)
-        .eq('role', 'driver')
-        .eq('status', 'active');
+        .eq('role', 'driver');
 
       if (error) {
         console.error('Error fetching drivers:', error);
       } else {
-        console.log('Drivers fetched (role=driver AND status=active):', data);
-        console.log('Drivers count:', data?.length || 0);
-        const mappedDrivers = (data || []).map(d => ({
+        console.log('All drivers (role=driver):', data);
+        // Filter only active drivers
+        const activeDrivers = (data || []).filter(d => d.status === 'active');
+        console.log('Active drivers:', activeDrivers);
+        const mappedDrivers = activeDrivers.map(d => ({
           id: d.id,
+          companyId: user.companyId,
           name: d.full_name,
-          role: d.role,
-          status: d.status
+          email: '', // Not needed for dropdown, but required by type
+          role: d.role as 'driver',
+          status: d.status as 'active',
+          isSuperAdmin: false
         })) as User[];
         setDrivers(mappedDrivers);
       }
