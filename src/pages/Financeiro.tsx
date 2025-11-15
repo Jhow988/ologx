@@ -28,9 +28,12 @@ const Financeiro: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     if (!user?.companyId) {
+        console.log('❌ Financeiro: Sem companyId');
         setLoading(false);
         return;
     };
+
+    console.log('🔄 Financeiro: Buscando dados para company_id:', user.companyId);
     setLoading(true);
 
     const [recordsRes, tripsRes, categoriesRes, subcategoriesRes] = await Promise.all([
@@ -39,13 +42,25 @@ const Financeiro: React.FC = () => {
       supabase.from('financial_categories').select('*').eq('company_id', user.companyId),
       supabase.from('financial_subcategories').select('*').eq('company_id', user.companyId)
     ]);
-    
-    if (recordsRes.error) console.error('Error fetching records:', recordsRes.error);
-    if (tripsRes.error) console.error('Error fetching trips:', tripsRes.error);
-    if (categoriesRes.error) console.error('Error fetching categories:', categoriesRes.error);
-    if (subcategoriesRes.error) console.error('Error fetching subcategories:', subcategoriesRes.error);
+
+    console.log('📊 Financeiro: Resultados das queries:');
+    console.log('  - Financial Records:', recordsRes.data?.length || 0, 'registros', recordsRes.error ? '❌ ERRO: ' + recordsRes.error.message : '✅');
+    console.log('  - Trips:', tripsRes.data?.length || 0, 'viagens', tripsRes.error ? '❌ ERRO: ' + tripsRes.error.message : '✅');
+    console.log('  - Categories:', categoriesRes.data?.length || 0, 'categorias', categoriesRes.error ? '❌ ERRO: ' + categoriesRes.error.message : '✅');
+    console.log('  - Subcategories:', subcategoriesRes.data?.length || 0, 'subcategorias', subcategoriesRes.error ? '❌ ERRO: ' + subcategoriesRes.error.message : '✅');
+
+    if (recordsRes.error) console.error('❌ Error fetching records:', recordsRes.error);
+    if (tripsRes.error) console.error('❌ Error fetching trips:', tripsRes.error);
+    if (categoriesRes.error) console.error('❌ Error fetching categories:', categoriesRes.error);
+    if (subcategoriesRes.error) console.error('❌ Error fetching subcategories:', subcategoriesRes.error);
+
+    if (recordsRes.data && recordsRes.data.length > 0) {
+      console.log('📝 Primeiro registro:', recordsRes.data[0]);
+    }
 
     const mappedRecords = (recordsRes.data || []).map((r: any) => ({ ...r, categoryName: r.category?.name, subcategoryName: r.subcategory?.name })) as FinancialRecord[];
+    console.log('✅ Registros mapeados:', mappedRecords.length);
+
     setRecords(mappedRecords);
     setTrips(tripsRes.data as Trip[] || []);
     setCategories(categoriesRes.data as FinancialCategory[] || []);
@@ -59,13 +74,22 @@ const Financeiro: React.FC = () => {
   }, [fetchData]);
 
   const handleSaveRecord = async (recordData: Partial<FinancialRecord> & { installments?: number }) => {
-    if (!user?.companyId) return;
+    if (!user?.companyId) {
+      console.log('❌ handleSaveRecord: Sem companyId');
+      return;
+    }
+
+    console.log('💾 handleSaveRecord - Salvando registro:', recordData);
 
     const { installments, ...data } = recordData;
 
     if (modalState.type === 'edit' && modalState.record) {
       const { error } = await supabase.from('financial_records').update(data).eq('id', modalState.record.id);
-      if (error) console.error("Error updating record:", error);
+      if (error) {
+        console.error("❌ Error updating record:", error);
+      } else {
+        console.log("✅ Registro atualizado com sucesso");
+      }
     } else {
         if (data.recurrence === 'installment' && installments && installments > 1) {
             const recordsToInsert = [];
@@ -81,11 +105,22 @@ const Financeiro: React.FC = () => {
                     recurrence_id: recurrenceId,
                 });
             }
-            const { error } = await supabase.from('financial_records').insert(recordsToInsert);
-            if (error) console.error("Error inserting installment records:", error);
+            console.log('💳 Inserindo parcelas:', recordsToInsert.length, 'registros');
+            const { error, data: insertedData } = await supabase.from('financial_records').insert(recordsToInsert).select();
+            if (error) {
+              console.error("❌ Error inserting installment records:", error);
+            } else {
+              console.log("✅ Parcelas inseridas:", insertedData?.length);
+            }
         } else {
-            const { error } = await supabase.from('financial_records').insert({ ...data, company_id: user.companyId });
-            if (error) console.error("Error inserting record:", error);
+            const recordToInsert = { ...data, company_id: user.companyId };
+            console.log('💳 Inserindo registro único:', recordToInsert);
+            const { error, data: insertedData } = await supabase.from('financial_records').insert(recordToInsert).select();
+            if (error) {
+              console.error("❌ Error inserting record:", error);
+            } else {
+              console.log("✅ Registro inserido:", insertedData);
+            }
         }
     }
     await fetchData();
@@ -103,10 +138,15 @@ const Financeiro: React.FC = () => {
 
   const filteredRecords = useMemo(() => {
     const typeFilter = view === 'pagar' ? 'payable' : 'receivable';
-    return records.filter(record =>
+    console.log(`🔍 Filtrando registros - View: ${view}, Type Filter: ${typeFilter}, Total Records: ${records.length}`);
+
+    const filtered = records.filter(record =>
       record.type === typeFilter &&
       record.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    console.log(`✅ Registros filtrados: ${filtered.length}`, filtered);
+    return filtered;
   }, [records, view, searchTerm]);
 
   const getStatusColor = (status: string) => ({

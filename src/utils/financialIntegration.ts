@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
  * Cria uma conta a receber quando uma viagem é concluída
  */
 export async function createReceivableFromTrip(tripId: string, companyId: string) {
+  console.log('🚀 createReceivableFromTrip - Iniciando para tripId:', tripId, 'companyId:', companyId);
+
   try {
     // Buscar dados da viagem
     const { data: trip, error: tripError } = await supabase
@@ -12,6 +14,8 @@ export async function createReceivableFromTrip(tripId: string, companyId: string
       .select('*, client:clients(name)')
       .eq('id', tripId)
       .single();
+
+    console.log('📦 Dados da viagem:', trip, 'Erro:', tripError);
 
     if (tripError) throw tripError;
     if (!trip) throw new Error('Viagem não encontrada');
@@ -61,8 +65,8 @@ export async function createReceivableFromTrip(tripId: string, companyId: string
         company_id: companyId,
         type: 'receivable',
         description: `Frete: ${clientName} (${route})`,
-        amount: trip.freight_value || 0,
-        due_date: trip.end_date || trip.start_date,
+        amount: (trip as any).freight_value || 0,
+        due_date: (trip as any).end_date || (trip as any).start_date,
         status: 'pending',
         category_id: category.id,
         related_trip_id: tripId,

@@ -150,20 +150,22 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, '');
+    console.log('💰 handleValueChange - Raw value:', rawValue);
+
     if (rawValue === '') {
+      console.log('💰 Valor vazio, definindo como 0');
       setFormData(prev => ({ ...prev, freight_value: 0 }));
       return;
     }
+
     const numberValue = Number(rawValue) / 100;
+    console.log('💰 Valor convertido:', numberValue);
     setFormData(prev => ({ ...prev, freight_value: numberValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.startDate || !formData.clientId || !formData.freight_value || !formData.origin || !formData.destination) {
-      alert('Por favor, preencha os campos obrigatórios (Data, Empresa, Valor, Origem e Destino).');
-      return;
-    }
+    // Validação simplificada - apenas salvar
     onSave(formData);
   };
 
@@ -198,11 +200,11 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Data *</label>
-                <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
+                <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Empresa *</label>
-                <select name="clientId" value={formData.clientId} onChange={handleChange} required className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
+                <select name="clientId" value={formData.clientId} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
                   <option value="">Selecione</option>
                   {clients.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}
                 </select>
@@ -234,11 +236,11 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Origem *</label>
-                <input type="text" name="origin" value={formData.origin} onChange={handleChange} placeholder="Cidade de origem" required className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
+                <input type="text" name="origin" value={formData.origin} onChange={handleChange} placeholder="Cidade de origem" className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Destino *</label>
-                <input type="text" name="destination" value={formData.destination} onChange={handleChange} placeholder="Cidade de destino" required className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
+                <input type="text" name="destination" value={formData.destination} onChange={handleChange} placeholder="Cidade de destino" className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Distância</label>
@@ -278,14 +280,14 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Veículo *</label>
-                <select name="vehicleId" value={formData.vehicleId} onChange={handleChange} required className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
+                <select name="vehicleId" value={formData.vehicleId} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
                   <option value="">Selecione</option>
                   {availableVehicles.map(vehicle => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate} - {vehicle.model}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1.5">Motorista *</label>
-                <select name="driverId" value={formData.driverId} onChange={handleChange} required className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
+                <select name="driverId" value={formData.driverId} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
                   <option value="">Selecione</option>
                   {availableDrivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
                 </select>
@@ -315,7 +317,6 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
                   placeholder="R$ 0,00"
                   value={formData.freight_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(formData.freight_value) : ''}
                   onChange={handleValueChange}
-                  required
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                 />
               </div>
