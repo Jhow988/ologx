@@ -86,11 +86,20 @@ const Financeiro: React.FC = () => {
 
     const { installments, ...data } = recordData;
 
+    // Converter campos vazios em null para evitar erros de UUID
+    const cleanedData = {
+      ...data,
+      subcategory_id: data.subcategory_id || null,
+      related_trip_id: data.related_trip_id || null,
+      trip_id: data.trip_id || null,
+      vehicle_id: data.vehicle_id || null,
+    };
+
     if (modalState.type === 'edit' && modalState.record) {
       console.log('📝 Modo EDIÇÃO - Atualizando registro:', modalState.record.id);
       const { error, data: updatedData } = await supabase
         .from('financial_records')
-        .update(data)
+        .update(cleanedData)
         .eq('id', modalState.record.id)
         .select();
 
@@ -104,18 +113,18 @@ const Financeiro: React.FC = () => {
     } else {
         console.log('✨ Modo CRIAÇÃO - Criando novo registro');
 
-        if (data.recurrence === 'installment' && installments && installments > 1) {
+        if (cleanedData.recurrence === 'installment' && installments && installments > 1) {
             const recordsToInsert = [];
             const recurrenceId = crypto.randomUUID();
             console.log('📦 Modo PARCELADO - Criando', installments, 'parcelas');
 
             for (let i = 0; i < installments; i++) {
-                const dueDate = new Date(data.due_date!);
+                const dueDate = new Date(cleanedData.due_date!);
                 dueDate.setMonth(dueDate.getMonth() + i);
                 recordsToInsert.push({
-                    ...data,
+                    ...cleanedData,
                     company_id: user.companyId,
-                    description: `${data.description} ${i + 1}/${installments}`,
+                    description: `${cleanedData.description} ${i + 1}/${installments}`,
                     due_date: dueDate.toISOString().split('T')[0],
                     recurrence_id: recurrenceId,
                 });
@@ -138,9 +147,9 @@ const Financeiro: React.FC = () => {
             }
         } else {
             const recordToInsert = {
-              ...data,
+              ...cleanedData,
               company_id: user.companyId,
-              status: data.status || 'pending'
+              status: cleanedData.status || 'pending'
             };
             console.log('💳 Modo ÚNICO - Dados a inserir:', recordToInsert);
 
