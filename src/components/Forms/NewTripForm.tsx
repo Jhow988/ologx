@@ -167,8 +167,18 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Validação simplificada - apenas salvar
-    onSave(formData);
+    console.log('🎯 SUBMIT FORMULÁRIO - formData ANTES de processar:', formData);
+
+    // Garantir que a data está no formato correto (yyyy-MM-dd)
+    const processedData = {
+      ...formData,
+      startDate: formData.startDate ? formData.startDate.split('T')[0] : formData.startDate,
+      endDate: formData.endDate ? formData.endDate.split('T')[0] : formData.endDate,
+    };
+
+    console.log('✅ SUBMIT FORMULÁRIO - processedData DEPOIS de processar:', processedData);
+
+    onSave(processedData);
   };
 
   const getAvailableStatuses = (currentStatus?: Trip['status']): Trip['status'][] => {
@@ -191,6 +201,10 @@ const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicle
 
   return (
     <form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto pr-2">
+      {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
+      <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-600 dark:text-blue-400">
+        🔄 Versão do Formulário: 2025-11-15 v3.0 | Validação Corrigida ✅
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* COLUNA ESQUERDA */}
         <div className="space-y-3">
