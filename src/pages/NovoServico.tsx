@@ -277,8 +277,7 @@ const NovoServico: React.FC = () => {
     if (!formData.startDate) errors.push('Data');
     if (!formData.clientId) errors.push('Empresa');
     if (!formData.freight_value || formData.freight_value <= 0) errors.push('Valor');
-    if (!formData.origin || formData.origin.trim() === '') errors.push('Origem (preencha o CEP)');
-    if (!formData.destination || formData.destination.trim() === '') errors.push('Destino (preencha o CEP)');
+    // Origem e Destino não são mais obrigatórios (CEP opcional)
     if (!formData.vehicleId) errors.push('Veículo');
     if (!formData.driverId) errors.push('Motorista');
 
@@ -352,7 +351,7 @@ const NovoServico: React.FC = () => {
       <form onSubmit={handleSubmit}>
         {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
         <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
-          ✅ Versão do Formulário: 2025-11-15 v4.0 | Validação Corrigida e Otimizada
+          ✅ Versão do Formulário: 2025-11-15 v4.1 | CEP Opcional - Validação Otimizada
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
