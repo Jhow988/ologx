@@ -269,8 +269,22 @@ const NovoServico: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.startDate || !formData.clientId || !formData.freight_value || !formData.origin || !formData.destination) {
-      toast.error('Por favor, preencha os campos obrigatórios (Data, Empresa, Valor, Origem e Destino).');
+    console.log('🎯 SUBMIT NovoServico - formData:', formData);
+
+    // Validação detalhada
+    const errors: string[] = [];
+
+    if (!formData.startDate) errors.push('Data');
+    if (!formData.clientId) errors.push('Empresa');
+    if (!formData.freight_value || formData.freight_value <= 0) errors.push('Valor');
+    if (!formData.origin || formData.origin.trim() === '') errors.push('Origem (preencha o CEP)');
+    if (!formData.destination || formData.destination.trim() === '') errors.push('Destino (preencha o CEP)');
+    if (!formData.vehicleId) errors.push('Veículo');
+    if (!formData.driverId) errors.push('Motorista');
+
+    if (errors.length > 0) {
+      console.error('❌ Validação falhou:', errors);
+      toast.error(`Preencha os campos: ${errors.join(', ')}`);
       return;
     }
 
@@ -283,6 +297,8 @@ const NovoServico: React.FC = () => {
       toast.error('Não há motoristas ativos disponíveis. Ative um motorista antes de criar um serviço.');
       return;
     }
+
+    console.log('✅ Validação passou! Criando serviço...');
 
     const attachmentsToSave = (formData.attachments || []).map(att => ({
       id: att.id,
@@ -334,6 +350,10 @@ const NovoServico: React.FC = () => {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
+        {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
+        <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
+          ✅ Versão do Formulário: 2025-11-15 v4.0 | Validação Corrigida e Otimizada
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
           <Card>
@@ -348,7 +368,6 @@ const NovoServico: React.FC = () => {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                 />
               </div>
@@ -493,7 +512,6 @@ const NovoServico: React.FC = () => {
                   name="vehicleId"
                   value={formData.vehicleId}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   disabled={vehicles.length === 0}
                 >
@@ -510,7 +528,6 @@ const NovoServico: React.FC = () => {
                   name="driverId"
                   value={formData.driverId}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   disabled={availableDrivers.length === 0}
                 >
@@ -543,7 +560,6 @@ const NovoServico: React.FC = () => {
                   placeholder="R$ 0,00"
                   value={formData.freight_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(formData.freight_value) : ''}
                   onChange={handleValueChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                 />
               </div>
