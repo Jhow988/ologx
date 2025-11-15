@@ -134,11 +134,11 @@ export function useTrips() {
 
       // Se mudou para 'completed', criar conta a receber automaticamente
       const wasCompleted = oldTrip?.status !== 'completed' && data.status === 'completed';
-      // Se estava 'completed' e mudou para outro status, remover conta a receber
-      const wasUncompleted = oldTrip?.status === 'completed' && data.status !== 'completed';
+      // Se o status atual NÃO é 'completed', garantir que não há conta a receber vinculada
+      const shouldNotHaveReceivable = data.status !== 'completed';
 
       console.log('  - wasCompleted?:', wasCompleted);
-      console.log('  - wasUncompleted?:', wasUncompleted);
+      console.log('  - shouldNotHaveReceivable?:', shouldNotHaveReceivable);
       console.log('    - oldTrip.status:', oldTrip?.status);
       console.log('    - data.status:', data.status);
 
@@ -148,26 +148,42 @@ export function useTrips() {
         console.log('  - user.companyId:', user.companyId);
         await handleTripCompletion(data.id, user.companyId);
         console.log('✅ handleTripCompletion finalizado');
-      } else if (wasUncompleted && user?.companyId) {
-        console.log('↩️ Viagem foi REVERTIDA de concluída! Removendo conta a receber...');
+      } else if (shouldNotHaveReceivable && user?.companyId) {
+        // Se o status não é 'completed', garantir que não há conta a receber
+        console.log('🧹 Viagem NÃO está concluída. Verificando se há conta a receber para remover...');
         console.log('  - trip.id:', data.id);
 
-        // Remover conta a receber vinculada a esta viagem
-        const { error: deleteError } = await supabase
+        // Verificar se existe conta a receber vinculada
+        const { data: existingRecords, error: checkError } = await supabase
           .from('financial_records')
-          .delete()
+          .select('id')
           .eq('related_trip_id', data.id)
           .eq('company_id', user.companyId);
 
-        if (deleteError) {
-          console.error('❌ Erro ao remover conta a receber:', deleteError);
-          toast.error('Erro ao remover conta a receber relacionada');
+        if (checkError) {
+          console.error('❌ Erro ao verificar contas a receber:', checkError);
+        } else if (existingRecords && existingRecords.length > 0) {
+          console.log(`📋 Encontradas ${existingRecords.length} conta(s) a receber vinculada(s). Removendo...`);
+
+          // Remover conta a receber vinculada a esta viagem
+          const { error: deleteError } = await supabase
+            .from('financial_records')
+            .delete()
+            .eq('related_trip_id', data.id)
+            .eq('company_id', user.companyId);
+
+          if (deleteError) {
+            console.error('❌ Erro ao remover conta a receber:', deleteError);
+            toast.error('Erro ao remover conta a receber relacionada');
+          } else {
+            console.log('✅ Conta a receber removida com sucesso');
+            toast.success('Conta a receber removida');
+          }
         } else {
-          console.log('✅ Conta a receber removida com sucesso');
-          toast.success('Conta a receber removida');
+          console.log('✅ Nenhuma conta a receber vinculada encontrada');
         }
       } else {
-        console.log('⚠️ Viagem NÃO foi concluída ou já estava concluída. Não criando conta a receber.');
+        console.log('⚠️ Status já está concluído. Não é necessário fazer nada.');
       }
 
       // Log activity
