@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Search, Loader, Paperclip, Eye, Calendar, Mail, Send, Check } from 'lucide-react';
+import { Plus, Pencil, Search, Loader, Paperclip, Eye, EyeOff, Calendar, Mail, Send, Check } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Table from '../components/UI/Table';
@@ -27,6 +27,7 @@ const Viagens: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const [modalState, setModalState] = useState<{
     type: 'new' | 'edit' | 'details' | null;
@@ -151,6 +152,20 @@ const Viagens: React.FC = () => {
     setModalState({ type: null, trip: null });
   };
 
+  const handleToggleHidden = async (trip: Trip) => {
+    try {
+      const newHiddenStatus = !trip.hidden;
+      await updateTrip(trip.id, {
+        hidden: newHiddenStatus
+      });
+
+      toast.success(newHiddenStatus ? 'Serviço ocultado com sucesso' : 'Serviço reexibido com sucesso');
+    } catch (error) {
+      console.error('Erro ao alterar visibilidade do serviço:', error);
+      toast.error('Erro ao alterar visibilidade do serviço');
+    }
+  };
+
   const handleSendEmail = async (trip: Trip) => {
     if (!trip.attachments || trip.attachments.length === 0) {
       toast.error('Não há anexos para enviar');
@@ -211,6 +226,11 @@ const Viagens: React.FC = () => {
   };
 
   const filteredTrips = trips.filter(trip => {
+    // Filtro de viagens ocultas
+    if (!showHidden && trip.hidden) {
+      return false;
+    }
+
     // Filtro de busca por texto
     const matchesSearch = trip.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       trip.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -320,8 +340,28 @@ const Viagens: React.FC = () => {
       header: 'Ações',
       render: (_: any, trip: Trip) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" icon={Eye} onClick={() => setModalState({ type: 'details', trip })} />
-          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => navigate(`/servicos/editar/${trip.id}`)} />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Eye}
+            onClick={() => setModalState({ type: 'details', trip })}
+            title="Visualizar detalhes"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Pencil}
+            onClick={() => navigate(`/servicos/editar/${trip.id}`)}
+            title="Editar serviço"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={trip.hidden ? Eye : EyeOff}
+            onClick={() => handleToggleHidden(trip)}
+            title={trip.hidden ? "Reexibir serviço" : "Ocultar serviço"}
+            className={trip.hidden ? "text-gray-400" : ""}
+          />
         </div>
       ),
     },
@@ -350,7 +390,7 @@ const Viagens: React.FC = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <input
@@ -371,6 +411,15 @@ const Viagens: React.FC = () => {
                   placeholder="Data final"
                 />
               </div>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-border transition-colors whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={showHidden}
+                  onChange={(e) => setShowHidden(e.target.checked)}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <span className="text-sm">Mostrar ocultos</span>
+              </label>
             </div>
           </div>
 

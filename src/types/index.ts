@@ -77,6 +77,9 @@ export interface Trip {
   vehicleType?: string;
   freightType?: string;
   insuranceInfo?: string;
+  hidden?: boolean;
+  email_sent?: boolean;
+  email_sent_at?: string;
   // Joined data
   clientName?: string;
   vehiclePlate?: string;
