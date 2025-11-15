@@ -221,8 +221,15 @@ const Financeiro: React.FC = () => {
       return true;
     });
 
-    console.log(`✅ Registros filtrados: ${filtered.length}`, filtered);
-    return filtered;
+    // Ordenar por data de criação (mais recentes primeiro)
+    const sorted = filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+    });
+
+    console.log(`✅ Registros filtrados e ordenados: ${sorted.length}`, sorted);
+    return sorted;
   }, [records, view, searchTerm, startDate, endDate, selectedCategory]);
 
   const getStatusColor = (status: string) => ({
@@ -305,67 +312,69 @@ const Financeiro: React.FC = () => {
           </div>
 
           {/* Filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="md:col-span-2">
+          <div className="space-y-4 mb-6">
+            {/* Linha 1: Busca */}
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Buscar por descrição
               </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 bottom-2.5 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por descrição..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+              />
+            </div>
+
+            {/* Linha 2: Filtros de data e categoria */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Data Inicial
+                </label>
                 <input
-                  type="text"
-                  placeholder="Buscar por descrição..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Data Final
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Categoria
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                >
+                  <option value="">Todas as categorias</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Data Final
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Categoria
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-              >
-                <option value="">Todas as categorias</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Botão Limpar Filtros */}
+            {/* Linha 3: Botão Limpar e Contador */}
             {(searchTerm || startDate || endDate || selectedCategory) && (
-              <div className="md:col-span-4 flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-dark-border">
                 <button
                   onClick={() => {
                     setSearchTerm('');
@@ -373,7 +382,7 @@ const Financeiro: React.FC = () => {
                     setEndDate('');
                     setSelectedCategory('');
                   }}
-                  className="text-sm text-primary hover:text-primary-dark font-medium"
+                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                 >
                   Limpar filtros
                 </button>
