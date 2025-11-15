@@ -255,10 +255,15 @@ const EditarServico: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Atualizar status automaticamente baseado nas datas
+  // Atualizar status automaticamente baseado nas datas (somente quando datas mudam)
   useEffect(() => {
+    // Não atualizar se não houver data de início ou se estiver cancelado
+    if (!formData.startDate || formData.status === 'cancelled') return;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    let newStatus: typeof formData.status = formData.status;
 
     if (formData.endDate) {
       const endDate = new Date(formData.endDate);
@@ -266,27 +271,26 @@ const EditarServico: React.FC = () => {
 
       if (endDate <= today) {
         // Se tem data de término e já passou, marca como concluído
-        if (formData.status !== 'completed' && formData.status !== 'cancelled') {
-          setFormData(prev => ({ ...prev, status: 'completed' }));
-        }
+        newStatus = 'completed';
       }
-    } else if (formData.startDate) {
+    } else {
       const startDate = new Date(formData.startDate);
       startDate.setHours(0, 0, 0, 0);
 
       if (startDate < today) {
         // Se começou no passado mas não tem data de término, está em andamento
-        if (formData.status !== 'in_progress' && formData.status !== 'cancelled') {
-          setFormData(prev => ({ ...prev, status: 'in_progress' }));
-        }
+        newStatus = 'in_progress';
       } else {
         // Se é hoje ou futuro, está agendado
-        if (formData.status !== 'scheduled' && formData.status !== 'cancelled') {
-          setFormData(prev => ({ ...prev, status: 'scheduled' }));
-        }
+        newStatus = 'scheduled';
       }
     }
-  }, [formData.startDate, formData.endDate]);
+
+    // Só atualizar se o status mudou para evitar loops
+    if (newStatus !== formData.status) {
+      setFormData(prev => ({ ...prev, status: newStatus }));
+    }
+  }, [formData.startDate, formData.endDate, formData.status]);
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, '');
