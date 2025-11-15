@@ -29,6 +29,8 @@ const EditarServico: React.FC = () => {
   const [formData, setFormData] = useState({
     clientId: '',
     startDate: '',
+    endDate: '',
+    status: 'scheduled' as 'scheduled' | 'in_progress' | 'completed' | 'cancelled',
     cte: '',
     nf: '',
     requester: '',
@@ -88,6 +90,8 @@ const EditarServico: React.FC = () => {
         setFormData({
           clientId: trip.client_id || '',
           startDate: trip.start_date || '',
+          endDate: trip.end_date || '',
+          status: trip.status || 'scheduled',
           cte: trip.cte || '',
           nf: trip.nf || '',
           requester: trip.requester || '',
@@ -251,6 +255,39 @@ const EditarServico: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Atualizar status automaticamente baseado nas datas
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (formData.endDate) {
+      const endDate = new Date(formData.endDate);
+      endDate.setHours(0, 0, 0, 0);
+
+      if (endDate <= today) {
+        // Se tem data de término e já passou, marca como concluído
+        if (formData.status !== 'completed' && formData.status !== 'cancelled') {
+          setFormData(prev => ({ ...prev, status: 'completed' }));
+        }
+      }
+    } else if (formData.startDate) {
+      const startDate = new Date(formData.startDate);
+      startDate.setHours(0, 0, 0, 0);
+
+      if (startDate < today) {
+        // Se começou no passado mas não tem data de término, está em andamento
+        if (formData.status !== 'in_progress' && formData.status !== 'cancelled') {
+          setFormData(prev => ({ ...prev, status: 'in_progress' }));
+        }
+      } else {
+        // Se é hoje ou futuro, está agendado
+        if (formData.status !== 'scheduled' && formData.status !== 'cancelled') {
+          setFormData(prev => ({ ...prev, status: 'scheduled' }));
+        }
+      }
+    }
+  }, [formData.startDate, formData.endDate]);
+
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, '');
     if (rawValue === '') {
@@ -280,6 +317,8 @@ const EditarServico: React.FC = () => {
     const dataToSave = {
       client_id: formData.clientId,
       start_date: formData.startDate,
+      end_date: formData.endDate || null,
+      status: formData.status,
       cte: formData.cte || null,
       nf: formData.nf || null,
       requester: formData.requester || null,
@@ -334,7 +373,7 @@ const EditarServico: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Data do Serviço *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Data de Início *</label>
                 <input
                   type="date"
                   name="startDate"
@@ -343,6 +382,38 @@ const EditarServico: React.FC = () => {
                   required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Data de Término</label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  min={formData.startDate}
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Preencha quando o serviço for concluído
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Status</label>
+                <div className="px-3 py-2.5 border border-gray-200 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-border">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    formData.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' :
+                    formData.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' :
+                    formData.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' :
+                    'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                  }`}>
+                    {formData.status === 'completed' ? 'Concluído' :
+                     formData.status === 'in_progress' ? 'Em Andamento' :
+                     formData.status === 'scheduled' ? 'Agendado' : 'Cancelado'}
+                  </span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Atualizado automaticamente pelas datas
+                  </p>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Empresa *</label>
