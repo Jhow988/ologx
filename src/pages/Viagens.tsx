@@ -104,6 +104,7 @@ const Viagens: React.FC = () => {
     requester: t.requester,
     distance: t.distance || 0,
     attachments: t.attachments || [],
+    hidden: t.hidden || false,
     email_sent: t.email_sent || false,
     email_sent_at: t.email_sent_at,
   })) as Trip[];
