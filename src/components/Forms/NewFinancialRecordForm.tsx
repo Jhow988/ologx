@@ -54,14 +54,28 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('🎯 NewFinancialRecordForm - handleSubmit chamado');
+    console.log('  - formData:', formData);
+    console.log('  - installments:', installments);
+
     if (!formData.description || formData.amount <= 0 || !formData.category_id) {
+      console.error('❌ Validação falhou:', {
+        description: formData.description,
+        amount: formData.amount,
+        category_id: formData.category_id
+      });
       alert('Por favor, preencha a descrição, um valor maior que zero e a categoria.');
       return;
     }
-    onSave({
+
+    const dataToSave = {
       ...formData,
       installments: formData.recurrence === 'installment' ? installments : 1,
-    });
+    };
+
+    console.log('✅ Dados validados, enviando para onSave:', dataToSave);
+    onSave(dataToSave);
   };
   
   const availableSubcategories = subcategories.filter(sc => sc.category_id === formData.category_id);

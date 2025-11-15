@@ -107,12 +107,18 @@ export function useTrips() {
   // Atualizar viagem
   const updateTrip = async (id: string, tripData: TripUpdate) => {
     try {
+      console.log('🔄 useTrips.updateTrip - INICIANDO');
+      console.log('  - id:', id);
+      console.log('  - tripData:', tripData);
+
       // Buscar status anterior
       const { data: oldTrip } = await supabase
         .from('trips')
         .select('status')
         .eq('id', id)
         .single();
+
+      console.log('  - oldTrip status:', oldTrip?.status);
 
       const { data, error } = await supabase
         .from('trips')
@@ -121,12 +127,25 @@ export function useTrips() {
         .select()
         .single();
 
+      console.log('  - data após update:', data);
+      console.log('  - error:', error);
+
       if (error) throw error;
 
       // Se mudou para 'completed', criar conta a receber automaticamente
       const wasCompleted = oldTrip?.status !== 'completed' && data.status === 'completed';
+      console.log('  - wasCompleted?:', wasCompleted);
+      console.log('    - oldTrip.status:', oldTrip?.status);
+      console.log('    - data.status:', data.status);
+
       if (wasCompleted && user?.companyId) {
+        console.log('🎉 Viagem foi CONCLUÍDA! Chamando handleTripCompletion...');
+        console.log('  - trip.id:', data.id);
+        console.log('  - user.companyId:', user.companyId);
         await handleTripCompletion(data.id, user.companyId);
+        console.log('✅ handleTripCompletion finalizado');
+      } else {
+        console.log('⚠️ Viagem NÃO foi concluída ou já estava concluída. Não criando conta a receber.');
       }
 
       // Log activity

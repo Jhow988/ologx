@@ -5,22 +5,30 @@ import toast from 'react-hot-toast';
  * Cria uma conta a receber quando uma viagem é concluída
  */
 export async function createReceivableFromTrip(tripId: string, companyId: string) {
-  console.log('🚀 createReceivableFromTrip - Iniciando para tripId:', tripId, 'companyId:', companyId);
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('🚀 createReceivableFromTrip - INICIANDO');
+  console.log('  - tripId:', tripId);
+  console.log('  - companyId:', companyId);
+  console.log('═══════════════════════════════════════════════════════════');
 
   try {
     // Buscar dados da viagem
+    console.log('📡 Buscando dados da viagem no banco...');
     const { data: trip, error: tripError } = await supabase
       .from('trips')
       .select('*, client:clients(name)')
       .eq('id', tripId)
       .single();
 
-    console.log('📦 Dados da viagem:', trip, 'Erro:', tripError);
+    console.log('📦 Resultado da busca da viagem:');
+    console.log('  - trip:', trip);
+    console.log('  - erro:', tripError);
 
     if (tripError) throw tripError;
     if (!trip) throw new Error('Viagem não encontrada');
 
     // Verificar se já existe um registro financeiro para esta viagem
+    console.log('🔍 Verificando se já existe conta a receber para esta viagem...');
     const { data: existing } = await supabase
       .from('financial_records')
       .select('id')
@@ -28,12 +36,16 @@ export async function createReceivableFromTrip(tripId: string, companyId: string
       .eq('type', 'receivable')
       .single();
 
+    console.log('  - existing:', existing);
+
     if (existing) {
-      console.log('Conta a receber já existe para esta viagem');
+      console.log('⚠️ Conta a receber já existe para esta viagem:', existing.id);
       return existing;
     }
+    console.log('✅ Nenhuma conta existente encontrada, prosseguindo...');
 
     // Buscar ou criar categoria "Frete/Serviços"
+    console.log('🏷️ Buscando/criando categoria "Frete/Serviços"...');
     let { data: category } = await supabase
       .from('financial_categories')
       .select('id')
@@ -41,7 +53,10 @@ export async function createReceivableFromTrip(tripId: string, companyId: string
       .eq('name', 'Frete/Serviços')
       .single();
 
+    console.log('  - categoria encontrada:', category);
+
     if (!category) {
+      console.log('  - Categoria não existe, criando...');
       const { data: newCategory, error: catError } = await supabase
         .from('financial_categories')
         .insert({
@@ -51,33 +66,63 @@ export async function createReceivableFromTrip(tripId: string, companyId: string
         .select()
         .single();
 
+      console.log('  - nova categoria criada:', newCategory);
+      console.log('  - erro ao criar categoria:', catError);
+
       if (catError) throw catError;
       category = newCategory;
+    } else {
+      console.log('  - Categoria já existe:', category.id);
     }
 
     // Criar conta a receber
     const clientName = trip.client?.name || 'Cliente';
     const route = `${trip.origin} - ${trip.destination}`;
 
+    const recordData = {
+      company_id: companyId,
+      type: 'receivable' as const,
+      description: `Frete: ${clientName} (${route})`,
+      amount: (trip as any).freight_value || 0,
+      due_date: (trip as any).end_date || (trip as any).start_date,
+      status: 'pending' as const,
+      category_id: category.id,
+      related_trip_id: tripId,
+      recurrence: 'unique' as const
+    };
+
+    console.log('💰 Criando conta a receber com os dados:');
+    console.log('  - company_id:', recordData.company_id);
+    console.log('  - type:', recordData.type);
+    console.log('  - description:', recordData.description);
+    console.log('  - amount:', recordData.amount);
+    console.log('  - due_date:', recordData.due_date);
+    console.log('  - status:', recordData.status);
+    console.log('  - category_id:', recordData.category_id);
+    console.log('  - related_trip_id:', recordData.related_trip_id);
+    console.log('  - recurrence:', recordData.recurrence);
+
     const { data: financialRecord, error: finError } = await supabase
       .from('financial_records')
-      .insert({
-        company_id: companyId,
-        type: 'receivable',
-        description: `Frete: ${clientName} (${route})`,
-        amount: (trip as any).freight_value || 0,
-        due_date: (trip as any).end_date || (trip as any).start_date,
-        status: 'pending',
-        category_id: category.id,
-        related_trip_id: tripId,
-        recurrence: 'unique'
-      })
+      .insert([recordData])
       .select()
       .single();
 
-    if (finError) throw finError;
+    console.log('📋 Resultado da inserção:');
+    console.log('  - financialRecord:', financialRecord);
+    console.log('  - erro:', finError);
 
-    console.log('✅ Conta a receber criada:', financialRecord);
+    if (finError) {
+      console.error('❌ ERRO ao criar conta a receber:');
+      console.error('  - message:', finError.message);
+      console.error('  - details:', finError.details);
+      console.error('  - hint:', finError.hint);
+      console.error('  - code:', finError.code);
+      throw finError;
+    }
+
+    console.log('✅✅✅ Conta a receber criada COM SUCESSO:', financialRecord);
+    console.log('═══════════════════════════════════════════════════════════');
     return financialRecord;
   } catch (error) {
     console.error('Erro ao criar conta a receber:', error);

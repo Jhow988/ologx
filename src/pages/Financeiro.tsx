@@ -79,21 +79,36 @@ const Financeiro: React.FC = () => {
       return;
     }
 
-    console.log('💾 handleSaveRecord - Salvando registro:', recordData);
+    console.log('💾 handleSaveRecord - INICIANDO');
+    console.log('  - Dados recebidos:', recordData);
+    console.log('  - user.companyId:', user.companyId);
+    console.log('  - modalState.type:', modalState.type);
 
     const { installments, ...data } = recordData;
 
     if (modalState.type === 'edit' && modalState.record) {
-      const { error } = await supabase.from('financial_records').update(data).eq('id', modalState.record.id);
+      console.log('📝 Modo EDIÇÃO - Atualizando registro:', modalState.record.id);
+      const { error, data: updatedData } = await supabase
+        .from('financial_records')
+        .update(data)
+        .eq('id', modalState.record.id)
+        .select();
+
       if (error) {
         console.error("❌ Error updating record:", error);
+        console.error("  - message:", error.message);
+        console.error("  - details:", error.details);
       } else {
-        console.log("✅ Registro atualizado com sucesso");
+        console.log("✅ Registro atualizado com sucesso:", updatedData);
       }
     } else {
+        console.log('✨ Modo CRIAÇÃO - Criando novo registro');
+
         if (data.recurrence === 'installment' && installments && installments > 1) {
             const recordsToInsert = [];
             const recurrenceId = crypto.randomUUID();
+            console.log('📦 Modo PARCELADO - Criando', installments, 'parcelas');
+
             for (let i = 0; i < installments; i++) {
                 const dueDate = new Date(data.due_date!);
                 dueDate.setMonth(dueDate.getMonth() + i);
@@ -105,25 +120,50 @@ const Financeiro: React.FC = () => {
                     recurrence_id: recurrenceId,
                 });
             }
-            console.log('💳 Inserindo parcelas:', recordsToInsert.length, 'registros');
-            const { error, data: insertedData } = await supabase.from('financial_records').insert(recordsToInsert).select();
+            console.log('💳 Dados a inserir (parcelas):', recordsToInsert);
+
+            const { error, data: insertedData } = await supabase
+              .from('financial_records')
+              .insert(recordsToInsert)
+              .select();
+
             if (error) {
               console.error("❌ Error inserting installment records:", error);
+              console.error("  - message:", error.message);
+              console.error("  - details:", error.details);
+              console.error("  - hint:", error.hint);
             } else {
-              console.log("✅ Parcelas inseridas:", insertedData?.length);
+              console.log("✅ Parcelas inseridas com sucesso:", insertedData?.length, 'registros');
+              console.log("  - Primeiro registro:", insertedData?.[0]);
             }
         } else {
-            const recordToInsert = { ...data, company_id: user.companyId };
-            console.log('💳 Inserindo registro único:', recordToInsert);
-            const { error, data: insertedData } = await supabase.from('financial_records').insert(recordToInsert).select();
+            const recordToInsert = {
+              ...data,
+              company_id: user.companyId,
+              status: data.status || 'pending'
+            };
+            console.log('💳 Modo ÚNICO - Dados a inserir:', recordToInsert);
+
+            const { error, data: insertedData } = await supabase
+              .from('financial_records')
+              .insert([recordToInsert])
+              .select();
+
             if (error) {
               console.error("❌ Error inserting record:", error);
+              console.error("  - message:", error.message);
+              console.error("  - details:", error.details);
+              console.error("  - hint:", error.hint);
+              console.error("  - code:", error.code);
             } else {
-              console.log("✅ Registro inserido:", insertedData);
+              console.log("✅ Registro inserido com sucesso:", insertedData);
             }
         }
     }
+
+    console.log('🔄 Recarregando dados...');
     await fetchData();
+    console.log('✅ Dados recarregados');
     closeModal();
   };
 
