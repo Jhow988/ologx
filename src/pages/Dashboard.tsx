@@ -76,11 +76,11 @@ const Dashboard: React.FC = () => {
       supabase.from('financial_records').select('amount', { count: 'exact' }).eq('company_id', user.companyId).eq('type', 'payable').gte('due_date', firstDayOfMonth).lte('due_date', lastDayOfMonth),
       supabase.from('financial_records').select('amount').eq('company_id', user.companyId).eq('type', 'receivable').gte('due_date', firstDayOfPrevMonth).lte('due_date', lastDayOfPrevMonth),
       supabase.from('financial_records').select('amount').eq('company_id', user.companyId).eq('type', 'payable').gte('due_date', firstDayOfPrevMonth).lte('due_date', lastDayOfPrevMonth),
-      supabase.from('trips').select('*, client:clients(name)').eq('company_id', user.companyId).order('start_date', { ascending: false }).limit(5),
+      supabase.from('trips').select('*, client:clients(name)').eq('company_id', user.companyId).neq('hidden', true).order('start_date', { ascending: false }).limit(5),
       supabase.from('vehicles').select('id, plate, licensing_due_date', { count: 'exact' }).eq('company_id', user.companyId).neq('status', 'inactive'),
       supabase.from('profiles').select('id, full_name, cnh_due_date').eq('company_id', user.companyId).eq('status', 'active').eq('role', 'driver'),
       supabase.from('clients').select('id', { count: 'exact' }).eq('company_id', user.companyId),
-      supabase.from('trips').select('id', { count: 'exact' }).eq('company_id', user.companyId).eq('status', 'completed').gte('created_at', firstDayOfMonth),
+      supabase.from('trips').select('id', { count: 'exact' }).eq('company_id', user.companyId).eq('status', 'completed').neq('hidden', true).gte('end_date', firstDayOfMonth).lte('end_date', lastDayOfMonth),
       supabase.from('maintenances').select('id', { count: 'exact' }).eq('company_id', user.companyId).eq('status', 'pending')
     ]);
 

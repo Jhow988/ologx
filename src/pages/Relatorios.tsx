@@ -18,11 +18,13 @@ interface FinancialRecord {
 interface Trip {
   id: string;
   status: string;
-  value: number;
+  freight_value: number;
   origin: string;
   destination: string;
   client_id: string;
   start_date: string;
+  end_date?: string;
+  hidden?: boolean;
 }
 
 interface Client {
@@ -65,10 +67,10 @@ const Relatorios: React.FC = () => {
     setLoading(true);
 
     try {
-      // Fetch data
+      // Fetch data (excluindo serviços ocultos)
       const [financialsRes, tripsRes, clientsRes] = await Promise.all([
         supabase.from('financial_records').select('*').eq('company_id', user.companyId),
-        supabase.from('trips').select('*').eq('company_id', user.companyId),
+        supabase.from('trips').select('*').eq('company_id', user.companyId).neq('hidden', true),
         supabase.from('clients').select('id, name').eq('company_id', user.companyId),
       ]);
 
@@ -92,9 +94,21 @@ const Relatorios: React.FC = () => {
         return date >= lastMonth && date <= lastMonthEnd;
       });
 
-      const totalRevenue = currentMonthFinancials
+      // Calcular receita de financial_records + serviços concluídos
+      const financialRevenue = currentMonthFinancials
         .filter(f => f.type === 'receivable')
         .reduce((sum, f) => sum + f.amount, 0);
+
+      // Adicionar receita de serviços concluídos no mês (usando end_date)
+      const completedTrips = trips.filter(t => {
+        if (!t.end_date || t.status !== 'completed') return false;
+        const endDate = new Date(t.end_date);
+        return endDate >= currentMonth;
+      });
+
+      const tripsRevenue = completedTrips.reduce((sum, t) => sum + (t.freight_value || 0), 0);
+
+      const totalRevenue = financialRevenue + tripsRevenue;
 
       const totalExpenses = currentMonthFinancials
         .filter(f => f.type === 'payable')
@@ -140,12 +154,7 @@ const Relatorios: React.FC = () => {
         ...data
       }));
 
-      // Revenue by service type (based on trips)
-      const currentMonthTrips = trips.filter(t => {
-        const date = new Date(t.start_date);
-        return date >= currentMonth;
-      });
-
+      // Revenue by service type (baseado em serviços concluídos)
       const serviceTypes: { [key: string]: number } = {
         'Frete Rodoviário': 0,
         'Entrega Expressa': 0,
@@ -153,12 +162,13 @@ const Relatorios: React.FC = () => {
         'Outros Serviços': 0
       };
 
-      currentMonthTrips.forEach(trip => {
-        // Simple logic - you can enhance this based on your data
-        const type = trip.value > 10000 ? 'Frete Rodoviário' :
-                     trip.value > 5000 ? 'Entrega Expressa' :
-                     trip.value > 2000 ? 'Armazenagem' : 'Outros Serviços';
-        serviceTypes[type] += trip.value;
+      completedTrips.forEach(trip => {
+        // Categorização baseada no valor (pode ser melhorada com campo específico)
+        const value = trip.freight_value || 0;
+        const type = value > 10000 ? 'Frete Rodoviário' :
+                     value > 5000 ? 'Entrega Expressa' :
+                     value > 2000 ? 'Armazenagem' : 'Outros Serviços';
+        serviceTypes[type] += value;
       });
 
       const totalServiceRevenue = Object.values(serviceTypes).reduce((a, b) => a + b, 0);
@@ -170,49 +180,69 @@ const Relatorios: React.FC = () => {
         }))
         .filter(s => s.value > 0);
 
-      // Recent transactions
-      const recentTransactions = currentMonthTrips
+      // Recent transactions (apenas serviços concluídos)
+      const recentTransactions = completedTrips
+        .sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime())
         .slice(0, 10)
         .map(trip => {
           const client = clients.find(c => c.id === trip.client_id);
+          const value = trip.freight_value || 0;
           return {
-            date: new Date(trip.start_date).toLocaleDateString('pt-BR'),
+            date: new Date(trip.end_date || trip.start_date).toLocaleDateString('pt-BR'),
             client: client?.name || 'Cliente não encontrado',
-            service: trip.value > 10000 ? 'Frete Rodoviário' : 'Entrega Expressa',
+            service: value > 10000 ? 'Frete Rodoviário' : 'Entrega Expressa',
             route: `${trip.origin} - ${trip.destination}`,
-            value: trip.value,
-            status: trip.status === 'completed' ? 'Pago' :
-                   trip.status === 'in_progress' ? 'Pendente' : 'Vencido'
+            value: value,
+            status: 'Concluído' // Todos são concluídos
           };
         });
 
-      // Top routes
+      // Top routes (apenas serviços concluídos)
       const routeStats: { [key: string]: { trips: number; revenue: number } } = {};
-      currentMonthTrips.forEach(trip => {
+      completedTrips.forEach(trip => {
         const route = `${trip.origin} - ${trip.destination}`;
         if (!routeStats[route]) {
           routeStats[route] = { trips: 0, revenue: 0 };
         }
         routeStats[route].trips++;
-        routeStats[route].revenue += trip.value;
+        routeStats[route].revenue += (trip.freight_value || 0);
+      });
+
+      // Calcular mudança de rotas comparando com mês anterior
+      const lastMonthTrips = trips.filter(t => {
+        if (!t.end_date || t.status !== 'completed') return false;
+        const endDate = new Date(t.end_date);
+        return endDate >= lastMonth && endDate <= lastMonthEnd;
+      });
+
+      const lastMonthRouteStats: { [key: string]: number } = {};
+      lastMonthTrips.forEach(trip => {
+        const route = `${trip.origin} - ${trip.destination}`;
+        lastMonthRouteStats[route] = (lastMonthRouteStats[route] || 0) + (trip.freight_value || 0);
       });
 
       const topRoutes = Object.entries(routeStats)
-        .map(([route, stats]) => ({
-          route,
-          trips: stats.trips,
-          revenue: stats.revenue,
-          change: Math.random() * 30 - 10 // Placeholder - calculate real change
-        }))
+        .map(([route, stats]) => {
+          const lastMonthRevenue = lastMonthRouteStats[route] || 0;
+          const change = lastMonthRevenue > 0
+            ? ((stats.revenue - lastMonthRevenue) / lastMonthRevenue) * 100
+            : 0;
+          return {
+            route,
+            trips: stats.trips,
+            revenue: stats.revenue,
+            change
+          };
+        })
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 3);
 
-      // Top clients
+      // Top clients (baseado em serviços concluídos)
       const clientRevenue: { [key: string]: number } = {};
-      currentMonthTrips.forEach(trip => {
+      completedTrips.forEach(trip => {
         const client = clients.find(c => c.id === trip.client_id);
         if (client) {
-          clientRevenue[client.name] = (clientRevenue[client.name] || 0) + trip.value;
+          clientRevenue[client.name] = (clientRevenue[client.name] || 0) + (trip.freight_value || 0);
         }
       });
 
@@ -221,12 +251,35 @@ const Relatorios: React.FC = () => {
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
 
-      // Cash flow (next 30 days - simulated)
-      const cashFlow = [
-        { week: 'Sem 1', inflow: 650000, outflow: -420000 },
-        { week: 'Sem 2', inflow: 680000, outflow: -450000 },
-        { week: 'Sem 3', inflow: 620000, outflow: -480000 },
-      ];
+      // Cash flow (próximas 4 semanas baseado em due_date)
+      const cashFlowData: { week: string; inflow: number; outflow: number; }[] = [];
+      for (let weekNum = 1; weekNum <= 4; weekNum++) {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() + (weekNum - 1) * 7);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+
+        const weekFinancials = financials.filter(f => {
+          const dueDate = new Date(f.due_date);
+          return dueDate >= weekStart && dueDate <= weekEnd;
+        });
+
+        const inflow = weekFinancials
+          .filter(f => f.type === 'receivable')
+          .reduce((sum, f) => sum + f.amount, 0);
+
+        const outflow = weekFinancials
+          .filter(f => f.type === 'payable')
+          .reduce((sum, f) => sum + f.amount, 0);
+
+        cashFlowData.push({
+          week: `Sem ${weekNum}`,
+          inflow,
+          outflow: -outflow
+        });
+      }
+
+      const cashFlow = cashFlowData;
 
       setReportData({
         totalRevenue,
