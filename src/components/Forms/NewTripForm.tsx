@@ -27,6 +27,8 @@ const getStatusText = (status: string) => {
 };
 
 const NewTripForm: React.FC<NewTripFormProps> = ({ initialData, clients, vehicles, users, trips, onSave, onCancel }) => {
+  console.log('🚀🚀🚀 NewTripForm RENDERIZADO - Versão DEBUG', new Date().toISOString());
+
   const getInitialState = () => ({
     clientId: initialData?.clientId || '',
     startDate: initialData?.startDate || new Date().toISOString().split('T')[0],
