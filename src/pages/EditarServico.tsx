@@ -87,10 +87,14 @@ const EditarServico: React.FC = () => {
     const loadTrip = () => {
       const trip = rawTrips.find((t: any) => t.id === id);
       if (trip) {
+        console.log('📅 Carregando dados da viagem:', trip);
+        console.log('  - start_date original:', trip.start_date);
+        console.log('  - end_date original:', trip.end_date);
+
         setFormData({
           clientId: trip.client_id || '',
-          startDate: trip.start_date || '',
-          endDate: trip.end_date || '',
+          startDate: trip.start_date ? trip.start_date.split('T')[0] : '',
+          endDate: trip.end_date ? trip.end_date.split('T')[0] : '',
           status: trip.status || 'scheduled',
           cte: trip.cte || '',
           nf: trip.nf || '',
