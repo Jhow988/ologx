@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Database } from '../types/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { handleTripCompletion } from '../utils/financialIntegration';
 
 type Trip = Database['public']['Tables']['trips']['Row'];
 type TripInsert = Database['public']['Tables']['trips']['Insert'];
@@ -106,6 +107,13 @@ export function useTrips() {
   // Atualizar viagem
   const updateTrip = async (id: string, tripData: TripUpdate) => {
     try {
+      // Buscar status anterior
+      const { data: oldTrip } = await supabase
+        .from('trips')
+        .select('status')
+        .eq('id', id)
+        .single();
+
       const { data, error } = await supabase
         .from('trips')
         .update(tripData)
@@ -114,6 +122,12 @@ export function useTrips() {
         .single();
 
       if (error) throw error;
+
+      // Se mudou para 'completed', criar conta a receber automaticamente
+      const wasCompleted = oldTrip?.status !== 'completed' && data.status === 'completed';
+      if (wasCompleted && user?.companyId) {
+        await handleTripCompletion(data.id, user.companyId);
+      }
 
       // Log activity
       await supabase.rpc('log_activity', {

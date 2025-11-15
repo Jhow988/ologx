@@ -9,6 +9,7 @@ import { Vehicle } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
+import { handleMaintenanceCompletion } from '../utils/financialIntegration';
 
 // Frontend-specific Maintenance type with camelCase
 interface Maintenance {
@@ -121,6 +122,11 @@ const Manutencao: React.FC = () => {
 
         if (newStatus === 'in_progress' && oldStatus !== 'in_progress') vehicleStatusUpdate = { status: 'maintenance' };
         else if (newStatus === 'completed' && oldStatus === 'in_progress') vehicleStatusUpdate = { status: 'active' };
+
+        // Se mudou para 'completed', criar conta a pagar automaticamente
+        if (newStatus === 'completed' && oldStatus !== 'completed' && user.companyId) {
+          await handleMaintenanceCompletion(modalState.maintenance.id, user.companyId);
+        }
 
         // Log activity
         await supabase.rpc('log_activity', {

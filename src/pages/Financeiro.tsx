@@ -137,7 +137,15 @@ const Financeiro: React.FC = () => {
       key: 'actions',
       header: 'Ações',
       render: (_: any, record: FinancialRecord) => (
-        <Button variant="ghost" size="sm" icon={CheckCircle} onClick={() => handleToggleStatus(record)} />
+        <Button
+          variant={record.status === 'paid' ? 'ghost' : 'primary'}
+          size="sm"
+          icon={CheckCircle}
+          onClick={() => handleToggleStatus(record)}
+          title={record.status === 'paid' ? 'Marcar como pendente' : 'Marcar como pago'}
+        >
+          {record.status === 'paid' ? '' : 'Pagar'}
+        </Button>
       ),
     },
   ];
