@@ -110,6 +110,36 @@ const Viagens: React.FC = () => {
   })) as Trip[];
 
   const handleSaveTrip = async (tripData: Partial<Trip>) => {
+    console.log('🎯 handleSaveTrip CHAMADO - dados recebidos:', tripData);
+
+    // VALIDAÇÃO DETALHADA
+    const validationErrors: string[] = [];
+
+    console.log('📋 Validando campo a campo:');
+    console.log('  clientId:', tripData.clientId, '- válido?', !!tripData.clientId);
+    console.log('  startDate:', tripData.startDate, '- válido?', !!tripData.startDate);
+    console.log('  origin:', tripData.origin, '- válido?', !!tripData.origin);
+    console.log('  destination:', tripData.destination, '- válido?', !!tripData.destination);
+    console.log('  vehicleId:', tripData.vehicleId, '- válido?', !!tripData.vehicleId);
+    console.log('  driverId:', tripData.driverId, '- válido?', !!tripData.driverId);
+    console.log('  freight_value:', tripData.freight_value, '- válido?', tripData.freight_value && tripData.freight_value > 0);
+
+    if (!tripData.clientId) validationErrors.push('Empresa');
+    if (!tripData.startDate) validationErrors.push('Data');
+    if (!tripData.origin || tripData.origin.trim() === '') validationErrors.push('Origem');
+    if (!tripData.destination || tripData.destination.trim() === '') validationErrors.push('Destino');
+    if (!tripData.vehicleId) validationErrors.push('Veículo');
+    if (!tripData.driverId) validationErrors.push('Motorista');
+    if (!tripData.freight_value || tripData.freight_value <= 0) validationErrors.push('Valor');
+
+    if (validationErrors.length > 0) {
+      console.error('❌ VALIDAÇÃO FALHOU - Campos inválidos:', validationErrors);
+      toast.error(`Por favor, preencha os campos obrigatórios: ${validationErrors.join(', ')}`);
+      return;
+    }
+
+    console.log('✅ Validação passou! Preparando dados para salvar...');
+
     // Preparar attachments para salvar (apenas metadados, não o File object)
     const attachmentsToSave = (tripData.attachments || []).map(att => ({
       id: att.id,
@@ -139,7 +169,7 @@ const Viagens: React.FC = () => {
       attachments: attachmentsToSave,
     };
 
-    console.log('Salvando viagem com dados:', dataToSave);
+    console.log('💾 Salvando viagem com dados finais:', dataToSave);
 
     if (modalState.type === 'edit' && modalState.trip) {
       await updateTrip(modalState.trip.id, dataToSave as any);
