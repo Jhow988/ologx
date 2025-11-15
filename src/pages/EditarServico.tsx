@@ -309,8 +309,17 @@ const EditarServico: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.startDate || !formData.clientId || !formData.freight_value || !formData.origin || !formData.destination) {
-      toast.error('Por favor, preencha os campos obrigatórios (Data, Empresa, Valor, Origem e Destino).');
+    // Validação detalhada com lista de erros
+    const errors: string[] = [];
+    if (!formData.startDate) errors.push('Data');
+    if (!formData.clientId) errors.push('Empresa');
+    if (!formData.freight_value || formData.freight_value <= 0) errors.push('Valor');
+    if (!formData.vehicleId) errors.push('Veículo');
+    if (!formData.driverId) errors.push('Motorista');
+    // Origem e Destino não são mais obrigatórios (CEP opcional)
+
+    if (errors.length > 0) {
+      toast.error(`Por favor, preencha os campos obrigatórios: ${errors.join(', ')}`);
       return;
     }
 
@@ -369,6 +378,11 @@ const EditarServico: React.FC = () => {
             <p className="text-gray-600 dark:text-dark-text-secondary">Altere os dados do serviço</p>
           </div>
         </div>
+      </div>
+
+      {/* Version Banner */}
+      <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
+        ✅ Versão: 2025-11-15 v5.0 | CEP Opcional na Edição
       </div>
 
       {/* Form */}
@@ -492,14 +506,13 @@ const EditarServico: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Origem *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Origem</label>
                   <input
                     type="text"
                     name="origin"
                     value={formData.origin}
                     onChange={handleChange}
                     placeholder="Cidade - UF"
-                    required
                     className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   />
                 </div>
@@ -515,14 +528,13 @@ const EditarServico: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Destino *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Destino</label>
                   <input
                     type="text"
                     name="destination"
                     value={formData.destination}
                     onChange={handleChange}
                     placeholder="Cidade - UF"
-                    required
                     className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   />
                 </div>
