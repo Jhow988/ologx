@@ -226,15 +226,28 @@ const Financeiro: React.FC = () => {
       key: 'actions',
       header: 'Ações',
       render: (_: any, record: FinancialRecord) => (
-        <Button
-          variant={record.status === 'paid' ? 'ghost' : 'primary'}
-          size="sm"
-          icon={CheckCircle}
-          onClick={() => handleToggleStatus(record)}
-          title={record.status === 'paid' ? 'Marcar como pendente' : 'Marcar como pago'}
-        >
-          {record.status === 'paid' ? '' : 'Pagar'}
-        </Button>
+        <div className="flex gap-2">
+          {record.status !== 'paid' && (
+            <button
+              onClick={() => handleToggleStatus(record)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+              title="Marcar como pago"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Pago
+            </button>
+          )}
+          {record.status === 'paid' && (
+            <button
+              onClick={() => handleToggleStatus(record)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors"
+              title="Marcar como pendente"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Reverter
+            </button>
+          )}
+        </div>
       ),
     },
   ];
