@@ -155,11 +155,19 @@ const Viagens: React.FC = () => {
   const handleToggleHidden = async (trip: Trip) => {
     try {
       const newHiddenStatus = !trip.hidden;
-      await updateTrip(trip.id, {
-        hidden: newHiddenStatus
-      });
+      console.log('Alterando visibilidade:', { tripId: trip.id, currentHidden: trip.hidden, newHidden: newHiddenStatus });
 
-      toast.success(newHiddenStatus ? 'Serviço ocultado com sucesso' : 'Serviço reexibido com sucesso');
+      const result = await updateTrip(trip.id, {
+        hidden: newHiddenStatus
+      } as any);
+
+      console.log('Resultado da atualização:', result);
+
+      if (result) {
+        toast.success(newHiddenStatus ? 'Serviço ocultado com sucesso' : 'Serviço reexibido com sucesso');
+      } else {
+        toast.error('Erro ao alterar visibilidade do serviço');
+      }
     } catch (error) {
       console.error('Erro ao alterar visibilidade do serviço:', error);
       toast.error('Erro ao alterar visibilidade do serviço');
