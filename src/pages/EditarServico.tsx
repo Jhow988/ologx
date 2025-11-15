@@ -259,42 +259,7 @@ const EditarServico: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Atualizar status automaticamente baseado nas datas (somente quando datas mudam)
-  useEffect(() => {
-    // Não atualizar se não houver data de início ou se estiver cancelado
-    if (!formData.startDate || formData.status === 'cancelled') return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let newStatus: typeof formData.status = formData.status;
-
-    if (formData.endDate) {
-      const endDate = new Date(formData.endDate);
-      endDate.setHours(0, 0, 0, 0);
-
-      if (endDate <= today) {
-        // Se tem data de término e já passou, marca como concluído
-        newStatus = 'completed';
-      }
-    } else {
-      const startDate = new Date(formData.startDate);
-      startDate.setHours(0, 0, 0, 0);
-
-      if (startDate < today) {
-        // Se começou no passado mas não tem data de término, está em andamento
-        newStatus = 'in_progress';
-      } else {
-        // Se é hoje ou futuro, está agendado
-        newStatus = 'scheduled';
-      }
-    }
-
-    // Só atualizar se o status mudou para evitar loops
-    if (newStatus !== formData.status) {
-      setFormData(prev => ({ ...prev, status: newStatus }));
-    }
-  }, [formData.startDate, formData.endDate, formData.status]);
+  // Removido: atualização automática de status para permitir edição manual
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, '');
@@ -382,7 +347,7 @@ const EditarServico: React.FC = () => {
 
       {/* Version Banner */}
       <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
-        ✅ Versão: 2025-11-15 v5.0 | CEP Opcional na Edição
+        ✅ Versão: 2025-11-15 v6.0 | Status Editável Manualmente
       </div>
 
       {/* Form */}
@@ -421,21 +386,17 @@ const EditarServico: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Status</label>
-                <div className="px-3 py-2.5 border border-gray-200 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-border">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    formData.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' :
-                    formData.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' :
-                    formData.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' :
-                    'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                  }`}>
-                    {formData.status === 'completed' ? 'Concluído' :
-                     formData.status === 'in_progress' ? 'Em Andamento' :
-                     formData.status === 'scheduled' ? 'Agendado' : 'Cancelado'}
-                  </span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Atualizado automaticamente pelas datas
-                  </p>
-                </div>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+                >
+                  <option value="scheduled">Agendado</option>
+                  <option value="in_progress">Em Andamento</option>
+                  <option value="completed">Concluído</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Empresa *</label>
