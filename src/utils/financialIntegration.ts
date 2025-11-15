@@ -62,7 +62,7 @@ export async function createReceivableFromTrip(tripId: string, companyId: string
         .insert({
           company_id: companyId,
           name: 'Frete/Serviços',
-          type: 'receivable'  // Adicionar tipo da categoria
+          type: 'income'  // Tipo para receitas (income/expense são os valores comuns)
         })
         .select()
         .single();
@@ -174,7 +174,7 @@ export async function createPayableFromMaintenance(maintenanceId: string, compan
         .insert({
           company_id: companyId,
           name: 'Manutenção',
-          type: 'payable'  // Adicionar tipo da categoria
+          type: 'expense'  // Tipo para despesas (income/expense são os valores comuns)
         })
         .select()
         .single();
