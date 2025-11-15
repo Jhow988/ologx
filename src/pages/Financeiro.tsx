@@ -20,7 +20,12 @@ const Financeiro: React.FC = () => {
   const [subcategories, setSubcategories] = useState<FinancialSubcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
+  // Filtros
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+
   const [modalState, setModalState] = useState<{
     type: 'new' | 'edit' | null;
     record: FinancialRecord | null;
@@ -189,14 +194,36 @@ const Financeiro: React.FC = () => {
     const typeFilter = view === 'pagar' ? 'payable' : 'receivable';
     console.log(`🔍 Filtrando registros - View: ${view}, Type Filter: ${typeFilter}, Total Records: ${records.length}`);
 
-    const filtered = records.filter(record =>
-      record.type === typeFilter &&
-      record.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = records.filter(record => {
+      // Filtro de tipo (pagar/receber)
+      if (record.type !== typeFilter) return false;
+
+      // Filtro de busca por texto
+      if (searchTerm && !record.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // Filtro de data inicial
+      if (startDate && record.due_date < startDate) {
+        return false;
+      }
+
+      // Filtro de data final
+      if (endDate && record.due_date > endDate) {
+        return false;
+      }
+
+      // Filtro de categoria
+      if (selectedCategory && record.category_id !== selectedCategory) {
+        return false;
+      }
+
+      return true;
+    });
 
     console.log(`✅ Registros filtrados: ${filtered.length}`, filtered);
     return filtered;
-  }, [records, view, searchTerm]);
+  }, [records, view, searchTerm, startDate, endDate, selectedCategory]);
 
   const getStatusColor = (status: string) => ({
     'paid': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
@@ -277,15 +304,97 @@ const Financeiro: React.FC = () => {
             </nav>
           </div>
 
-          <div className="flex-1 relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input type="text" placeholder="Buscar por descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg" />
+          {/* Filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Buscar por descrição
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por descrição..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data Inicial
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data Final
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Categoria
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+              >
+                <option value="">Todas as categorias</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botão Limpar Filtros */}
+            {(searchTerm || startDate || endDate || selectedCategory) && (
+              <div className="md:col-span-4 flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStartDate('');
+                    setEndDate('');
+                    setSelectedCategory('');
+                  }}
+                  className="text-sm text-primary hover:text-primary-dark font-medium"
+                >
+                  Limpar filtros
+                </button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {filteredRecords.length} {filteredRecords.length === 1 ? 'resultado' : 'resultados'}
+                </span>
+              </div>
+            )}
           </div>
 
           {loading ? (
             <div className="flex justify-center items-center h-64"><Loader className="h-8 w-8 animate-spin text-primary" /></div>
           ) : (
-            <Table columns={columns} data={filteredRecords} />
+            <>
+              {!searchTerm && !startDate && !endDate && !selectedCategory && (
+                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                  Total: {filteredRecords.length} {filteredRecords.length === 1 ? 'registro' : 'registros'}
+                </div>
+              )}
+              <Table columns={columns} data={filteredRecords} />
+            </>
           )}
         </Card>
       </div>
