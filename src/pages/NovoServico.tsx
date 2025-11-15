@@ -277,6 +277,7 @@ const NovoServico: React.FC = () => {
     if (!formData.startDate) errors.push('Data');
     if (!formData.clientId) errors.push('Empresa');
     if (!formData.freight_value || formData.freight_value <= 0) errors.push('Valor');
+    if (!formData.requester || formData.requester.trim() === '') errors.push('Solicitante');
     // Origem e Destino não são mais obrigatórios (CEP opcional)
     if (!formData.vehicleId) errors.push('Veículo');
     if (!formData.driverId) errors.push('Motorista');
@@ -351,7 +352,7 @@ const NovoServico: React.FC = () => {
       <form onSubmit={handleSubmit}>
         {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
         <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
-          ✅ Versão do Formulário: 2025-11-15 v4.1 | CEP Opcional - Validação Otimizada
+          ✅ Versão: 2025-11-15 v4.2 | Solicitante Obrigatório + CEP Opcional
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
@@ -418,7 +419,7 @@ const NovoServico: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Solicitante</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Solicitante *</label>
                 <input
                   type="text"
                   name="requester"
