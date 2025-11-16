@@ -55,9 +55,17 @@ ALTER TABLE public.trips
 ALTER COLUMN service_number SET NOT NULL;
 
 -- Add unique constraint for service_number per company
-ALTER TABLE public.trips
-ADD CONSTRAINT unique_service_number_per_company
-UNIQUE (company_id, service_number);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'unique_service_number_per_company'
+  ) THEN
+    ALTER TABLE public.trips
+    ADD CONSTRAINT unique_service_number_per_company
+    UNIQUE (company_id, service_number);
+  END IF;
+END $$;
 
 -- Create index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_trips_service_number
