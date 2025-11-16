@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAlerts } from '../contexts/AlertsContext';
 import { supabase } from '../lib/supabaseClient';
 import { SystemAlert } from '../types';
-import { Loader, AlertTriangle, Calendar, User, Truck, CheckCircle, Check, Eye, EyeOff } from 'lucide-react';
+import { Loader, AlertTriangle, Calendar, User, Truck, CheckCircle, Check, Eye, EyeOff, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import toast from 'react-hot-toast';
@@ -44,16 +44,20 @@ const Alertas: React.FC = () => {
     }
     setLoading(true);
 
-    const [vehiclesRes, driversRes] = await Promise.all([
-      supabase.from('vehicles').select('id, plate, licensing_due_date').eq('company_id', user.companyId).neq('status', 'inactive'),
-      supabase.from('profiles').select('id, full_name, cnh_due_date').eq('company_id', user.companyId).eq('status', 'active').not('cnh_due_date', 'is', null)
-    ]);
-
-    const generatedAlerts: SystemAlert[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const [vehiclesRes, driversRes, financialRes] = await Promise.all([
+      supabase.from('vehicles').select('id, plate, licensing_due_date').eq('company_id', user.companyId).neq('status', 'inactive'),
+      supabase.from('profiles').select('id, full_name, cnh_due_date').eq('company_id', user.companyId).eq('status', 'active').not('cnh_due_date', 'is', null),
+      supabase.from('financial_records').select('id, type, description, due_date, amount, status').eq('company_id', user.companyId).eq('status', 'pending').lte('due_date', tomorrow.toISOString().split('T')[0])
+    ]);
+
+    const generatedAlerts: SystemAlert[] = [];
 
     // Vehicle licensing alerts
     (vehiclesRes.data || []).forEach(v => {
@@ -88,7 +92,29 @@ const Alertas: React.FC = () => {
         }
       }
     });
-    
+
+    // Financial alerts (payable and receivable due today or tomorrow)
+    (financialRes.data || []).forEach((f: any) => {
+      if (f.due_date && f.status === 'pending') {
+        const dueDate = new Date(f.due_date + 'T00:00:00');
+        // Only show if due today or tomorrow
+        if (dueDate <= tomorrow && dueDate >= today) {
+          const isToday = dueDate.getTime() === today.getTime();
+          const typeLabel = f.type === 'payable' ? 'Pagar' : 'Receber';
+          const amountFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(f.amount);
+
+          generatedAlerts.push({
+            id: `financial-${f.type}-${f.id}`,
+            type: f.type === 'payable' ? 'financial-payable' : 'financial-receivable',
+            title: `Conta a ${typeLabel} ${isToday ? 'Vence Hoje' : 'Vence Amanhã'}`,
+            message: `${f.description} - ${amountFormatted} vence em ${dueDate.toLocaleDateString('pt-BR')}.`,
+            date: dueDate.toISOString(),
+            relatedId: f.id,
+          });
+        }
+      }
+    });
+
     // Sort alerts by date
     generatedAlerts.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -160,10 +186,12 @@ const Alertas: React.FC = () => {
     }
   };
 
-  const getAlertIcon = (type: SystemAlert['type']) => {
+  const getAlertIcon = (type: string) => {
     switch (type) {
       case 'licensing': return Truck;
       case 'cnh': return User;
+      case 'financial-payable': return TrendingDown;
+      case 'financial-receivable': return TrendingUp;
       default: return AlertTriangle;
     }
   };

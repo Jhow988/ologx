@@ -22,6 +22,15 @@ interface Driver {
   cnh_due_date: string;
 }
 
+interface FinancialRecord {
+  id: string;
+  type: string;
+  description: string;
+  due_date: string;
+  amount: number;
+  status: string;
+}
+
 const AlertsContext = createContext<AlertsContextType | undefined>(undefined);
 
 export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -56,6 +65,8 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       today.setHours(0, 0, 0, 0);
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(today.getDate() + 30);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
 
       // Fetch vehicles with licensing due in 30 days (only active, not inactive)
       const { data: vehicles, error: vehiclesError } = await supabase
@@ -80,6 +91,19 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (driversError) {
         console.error('Error fetching drivers:', driversError);
         throw driversError;
+      }
+
+      // Fetch financial records due today or tomorrow (only pending)
+      const { data: financialRecords, error: financialError } = await supabase
+        .from('financial_records')
+        .select('id, type, description, due_date, amount, status')
+        .eq('company_id', user.companyId)
+        .eq('status', 'pending')
+        .lte('due_date', tomorrow.toISOString().split('T')[0]);
+
+      if (financialError) {
+        console.error('Error fetching financial records:', financialError);
+        throw financialError;
       }
 
       // Fetch read alerts for this user
@@ -119,6 +143,20 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const dueDate = new Date(d.cnh_due_date + 'T00:00:00');
           if (dueDate <= thirtyDaysFromNow) {
             const alertId = `cnh-${d.id}`;
+            if (!readAlertIds.has(alertId)) {
+              count++;
+            }
+          }
+        }
+      });
+
+      // Count financial alerts (accounts payable and receivable due today or tomorrow)
+      (financialRecords as FinancialRecord[] | null || []).forEach((f) => {
+        if (f.due_date && f.status === 'pending') {
+          const dueDate = new Date(f.due_date + 'T00:00:00');
+          // Only count if due today or tomorrow
+          if (dueDate <= tomorrow && dueDate >= today) {
+            const alertId = `financial-${f.type}-${f.id}`;
             if (!readAlertIds.has(alertId)) {
               count++;
             }

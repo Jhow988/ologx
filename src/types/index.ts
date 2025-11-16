@@ -136,7 +136,7 @@ export interface Maintenance {
 
 export interface SystemAlert {
   id: string;
-  type: 'financial' | 'maintenance' | 'licensing' | 'cnh';
+  type: 'financial' | 'maintenance' | 'licensing' | 'cnh' | 'financial-payable' | 'financial-receivable';
   title: string;
   message: string;
   date: string;
