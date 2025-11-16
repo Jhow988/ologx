@@ -150,6 +150,46 @@ const Financeiro: React.FC = () => {
               console.log("✅ Parcelas inseridas com sucesso:", insertedData?.length, 'registros');
               console.log("  - Primeiro registro:", insertedData?.[0]);
             }
+        } else if (cleanedData.recurrence === 'recurring') {
+            const recordsToInsert = [];
+            const recurrenceId = crypto.randomUUID();
+
+            // Se installments = -1, é infinito. Criar 120 meses (10 anos) como padrão
+            const monthsToCreate = installments === -1 ? 120 : (installments || 12);
+            const isInfinite = installments === -1;
+
+            console.log(`🔄 Modo RECORRENTE - Criando ${monthsToCreate} meses${isInfinite ? ' (INFINITO)' : ''}`);
+
+            for (let i = 0; i < monthsToCreate; i++) {
+                const dueDate = new Date(cleanedData.due_date!);
+                dueDate.setMonth(dueDate.getMonth() + i);
+                recordsToInsert.push({
+                    ...cleanedData,
+                    company_id: user.companyId,
+                    description: isInfinite ? `${cleanedData.description} (Mês ${i + 1})` : `${cleanedData.description} (${i + 1}/${monthsToCreate})`,
+                    due_date: dueDate.toISOString().split('T')[0],
+                    recurrence_id: recurrenceId,
+                });
+            }
+            console.log('💳 Dados a inserir (recorrência):', recordsToInsert);
+
+            const { error, data: insertedData } = await supabase
+              .from('financial_records')
+              .insert(recordsToInsert)
+              .select();
+
+            if (error) {
+              console.error("❌ Error inserting recurring records:", error);
+              console.error("  - message:", error.message);
+              console.error("  - details:", error.details);
+              console.error("  - hint:", error.hint);
+            } else {
+              console.log(`✅ Recorrência inserida com sucesso: ${insertedData?.length} registros${isInfinite ? ' (infinito - 10 anos gerados)' : ''}`);
+              console.log("  - Primeiro registro:", insertedData?.[0]);
+              if (isInfinite) {
+                toast.success(`Recorrência infinita criada! 120 meses (10 anos) foram gerados inicialmente.`);
+              }
+            }
         } else {
             const recordToInsert = {
               ...cleanedData,

@@ -27,6 +27,7 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
 
   const [formData, setFormData] = useState(getInitialState());
   const [installments, setInstallments] = useState(12);
+  const [isInfiniteRecurrence, setIsInfiniteRecurrence] = useState(false);
 
   useEffect(() => {
     setFormData(getInitialState());
@@ -71,7 +72,7 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
 
     const dataToSave = {
       ...formData,
-      installments: formData.recurrence === 'installment' ? installments : 1,
+      installments: formData.recurrence === 'installment' ? installments : (formData.recurrence === 'recurring' ? (isInfiniteRecurrence ? -1 : installments) : 1),
     };
 
     console.log('✅ Dados validados, enviando para onSave:', dataToSave);
@@ -150,18 +151,35 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
         )}
 
         {formData.recurrence === 'recurring' && !initialData && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Repetir por (meses)</label>
-            <input
-              type="number"
-              value={installments}
-              onChange={(e) => setInstallments(Number(e.target.value))}
-              min="2"
-              max="60"
-              placeholder="Ex: 12 (para 1 ano)"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
-            />
-          </div>
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Repetir por (meses)</label>
+              <input
+                type="number"
+                value={installments}
+                onChange={(e) => setInstallments(Number(e.target.value))}
+                min="2"
+                max="120"
+                placeholder="Ex: 12 (para 1 ano)"
+                disabled={isInfiniteRecurrence}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text disabled:bg-gray-100 dark:disabled:bg-dark-border disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Recorrência Infinita</label>
+              <div className="flex items-center h-[42px]">
+                <input
+                  type="checkbox"
+                  checked={isInfiniteRecurrence}
+                  onChange={(e) => setIsInfiniteRecurrence(e.target.checked)}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded cursor-pointer"
+                />
+                <span className="ml-2 text-sm text-gray-600 dark:text-dark-text-secondary">
+                  Repetir indefinidamente
+                </span>
+              </div>
+            </div>
+          </>
         )}
 
         {initialData && (
