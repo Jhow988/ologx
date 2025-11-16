@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Plus, Search, Loader, TrendingUp, TrendingDown, CheckCircle } from 'lucide-react';
+import { Plus, Search, Loader, TrendingUp, TrendingDown, CheckCircle, Edit } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Table from '../components/UI/Table';
@@ -9,6 +9,7 @@ import NewFinancialRecordForm from '../components/Forms/NewFinancialRecordForm';
 import { FinancialRecord, Trip, FinancialCategory, FinancialSubcategory } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import toast from 'react-hot-toast';
 
 const Financeiro: React.FC = () => {
   const { view = 'pagar' } = useParams<{ view: 'pagar' | 'receber' }>();
@@ -91,13 +92,17 @@ const Financeiro: React.FC = () => {
 
     const { installments, ...data } = recordData;
 
-    // Converter campos vazios em null para evitar erros de UUID
+    // Converter campos vazios em null para evitar erros de UUID e remover campos extras
     const cleanedData = {
-      ...data,
+      type: data.type!,
+      description: data.description!,
+      amount: data.amount!,
+      due_date: data.due_date!,
+      category_id: data.category_id!,
       subcategory_id: data.subcategory_id || null,
+      recurrence: data.recurrence || 'unique',
+      status: data.status || 'pending',
       related_trip_id: data.related_trip_id || null,
-      trip_id: data.trip_id || null,
-      vehicle_id: data.vehicle_id || null,
     };
 
     if (modalState.type === 'edit' && modalState.record) {
@@ -282,11 +287,29 @@ const Financeiro: React.FC = () => {
     'paid': 'Pago', 'pending': 'Pendente', 'overdue': 'Vencido',
   }[status] || status);
 
+  const getRecurrenceText = (recurrence: string) => {
+    const map: any = {
+      'unique': 'Única',
+      'installment': 'Parcelado',
+      'recurring': 'Recorrente'
+    };
+    return map[recurrence] || recurrence;
+  };
+
   const columns = [
     { key: 'description', header: 'Descrição' },
     { key: 'due_date', header: 'Vencimento', render: (date: string) => new Date(date + 'T12:00:00').toLocaleDateString('pt-BR') },
     { key: 'amount', header: 'Valor', render: (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) },
     { key: 'categoryName', header: 'Categoria' },
+    {
+      key: 'recurrence',
+      header: 'Recorrência',
+      render: (recurrence: string) => (
+        <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+          {getRecurrenceText(recurrence)}
+        </span>
+      )
+    },
     {
       key: 'status',
       header: 'Status',
@@ -301,6 +324,12 @@ const Financeiro: React.FC = () => {
       header: 'Ações',
       render: (_: any, record: FinancialRecord) => (
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            icon={Edit}
+            onClick={() => setModalState({ type: 'edit', record })}
+            title="Editar"
+          />
           {record.status !== 'paid' && (
             <button
               onClick={() => handleToggleStatus(record)}
