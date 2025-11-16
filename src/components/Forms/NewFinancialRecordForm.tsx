@@ -124,15 +124,17 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
             {availableSubcategories.map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Recorrência</label>
-          <select name="recurrence" value={formData.recurrence} onChange={handleChange} disabled={!!initialData} className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text disabled:bg-gray-100 dark:disabled:bg-dark-border">
-            <option value="unique">Única</option>
-            <option value="installment">Parcelado</option>
-            <option value="recurring">Recorrente</option>
-          </select>
-        </div>
-        
+        {!initialData && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Recorrência</label>
+            <select name="recurrence" value={formData.recurrence} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
+              <option value="unique">Única</option>
+              <option value="installment">Parcelado</option>
+              <option value="recurring">Recorrente (Mensal)</option>
+            </select>
+          </div>
+        )}
+
         {formData.recurrence === 'installment' && !initialData && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Número de Parcelas</label>
@@ -142,6 +144,21 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
               onChange={(e) => setInstallments(Number(e.target.value))}
               min="2"
               max="60"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
+            />
+          </div>
+        )}
+
+        {formData.recurrence === 'recurring' && !initialData && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Repetir por (meses)</label>
+            <input
+              type="number"
+              value={installments}
+              onChange={(e) => setInstallments(Number(e.target.value))}
+              min="2"
+              max="60"
+              placeholder="Ex: 12 (para 1 ano)"
               className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
             />
           </div>
@@ -162,11 +179,21 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
           <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Vincular à Viagem (Opcional)</label>
           <select name="related_trip_id" value={formData.related_trip_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text">
             <option value="">Nenhuma</option>
-            {trips.map(trip => (
-              <option key={trip.id} value={trip.id}>
-                {trip.origin} → {trip.destination} ({trip.start_date})
-              </option>
-            ))}
+            {trips.map(trip => {
+              const date = new Date(trip.start_date || trip.startDate).toLocaleDateString('pt-BR');
+              const statusMap: any = {
+                scheduled: 'Agendado',
+                in_progress: 'Em Andamento',
+                completed: 'Concluído',
+                cancelled: 'Cancelado'
+              };
+              const statusText = statusMap[trip.status] || trip.status;
+              return (
+                <option key={trip.id} value={trip.id}>
+                  {date} - {trip.origin} → {trip.destination} ({statusText})
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
