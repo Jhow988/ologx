@@ -131,18 +131,12 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
             name="recurrence"
             value={formData.recurrence}
             onChange={handleChange}
-            disabled={!!initialData}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text disabled:bg-gray-100 dark:disabled:bg-dark-border disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
           >
             <option value="unique">Única</option>
             <option value="installment">Parcelado</option>
             <option value="recurring">Recorrente (Mensal)</option>
           </select>
-          {initialData && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              O tipo de recorrência não pode ser alterado após a criação
-            </p>
-          )}
         </div>
 
         {formData.recurrence === 'installment' && !initialData && (
