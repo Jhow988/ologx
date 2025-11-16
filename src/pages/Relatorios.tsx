@@ -25,6 +25,7 @@ interface Trip {
   start_date: string;
   end_date?: string;
   hidden?: boolean;
+  vehicle_type?: string;
 }
 
 interface Client {
@@ -44,7 +45,7 @@ interface ReportData {
     expensesChange: number;
   };
   monthlyFinancials: { month: string; revenue: number; expenses: number; }[];
-  revenueByService: { name: string; value: number; percentage: number; }[];
+  revenueByVehicle: { name: string; value: number; percentage: number; }[];
   recentTransactions: any[];
   topRoutes: { route: string; trips: number; revenue: number; change: number; }[];
   topClients: { name: string; revenue: number; }[];
@@ -154,31 +155,24 @@ const Relatorios: React.FC = () => {
         ...data
       }));
 
-      // Revenue by service type (baseado em serviços concluídos)
-      const serviceTypes: { [key: string]: number } = {
-        'Frete Rodoviário': 0,
-        'Entrega Expressa': 0,
-        'Armazenagem': 0,
-        'Outros Serviços': 0
-      };
+      // Revenue by vehicle type (baseado em serviços concluídos)
+      const vehicleTypes: { [key: string]: number } = {};
 
       completedTrips.forEach(trip => {
-        // Categorização baseada no valor (pode ser melhorada com campo específico)
         const value = trip.freight_value || 0;
-        const type = value > 10000 ? 'Frete Rodoviário' :
-                     value > 5000 ? 'Entrega Expressa' :
-                     value > 2000 ? 'Armazenagem' : 'Outros Serviços';
-        serviceTypes[type] += value;
+        const vehicleType = trip.vehicle_type || 'Não especificado';
+        vehicleTypes[vehicleType] = (vehicleTypes[vehicleType] || 0) + value;
       });
 
-      const totalServiceRevenue = Object.values(serviceTypes).reduce((a, b) => a + b, 0);
-      const revenueByService = Object.entries(serviceTypes)
+      const totalVehicleRevenue = Object.values(vehicleTypes).reduce((a, b) => a + b, 0);
+      const revenueByVehicle = Object.entries(vehicleTypes)
         .map(([name, value]) => ({
           name,
           value,
-          percentage: totalServiceRevenue > 0 ? (value / totalServiceRevenue) * 100 : 0
+          percentage: totalVehicleRevenue > 0 ? (value / totalVehicleRevenue) * 100 : 0
         }))
-        .filter(s => s.value > 0);
+        .filter(s => s.value > 0)
+        .sort((a, b) => b.value - a.value);
 
       // Recent transactions (apenas serviços concluídos)
       const recentTransactions = completedTrips
@@ -293,7 +287,7 @@ const Relatorios: React.FC = () => {
           expensesChange: lastMonthExpenses > 0 ? ((totalExpenses - lastMonthExpenses) / lastMonthExpenses) * 100 : 0
         },
         monthlyFinancials,
-        revenueByService,
+        revenueByVehicle,
         recentTransactions,
         topRoutes,
         topClients,
@@ -364,7 +358,7 @@ const Relatorios: React.FC = () => {
     ]
   };
 
-  const serviceRevenueOption = {
+  const vehicleRevenueOption = {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
@@ -388,8 +382,8 @@ const Relatorios: React.FC = () => {
           color: theme === 'dark' ? '#e2e8f0' : '#1a202c'
         },
         labelLine: { show: true },
-        data: reportData?.revenueByService.map(s => ({ name: s.name, value: s.value })) || [],
-        color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
+        data: reportData?.revenueByVehicle.map(s => ({ name: s.name, value: s.value })) || [],
+        color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f97316', '#14b8a6']
       }
     ]
   };
@@ -614,8 +608,8 @@ const Relatorios: React.FC = () => {
           <ReactECharts option={revenueVsExpensesOption} style={{ height: '350px' }} />
         </Card>
 
-        <Card title="Receita por Tipo de Serviço">
-          <ReactECharts option={serviceRevenueOption} style={{ height: '350px' }} />
+        <Card title="Receita por Tipo de Veículo">
+          <ReactECharts option={vehicleRevenueOption} style={{ height: '350px' }} />
         </Card>
       </div>
 
