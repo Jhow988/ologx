@@ -139,7 +139,7 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
           </select>
         </div>
 
-        {formData.recurrence === 'installment' && !initialData && (
+        {formData.recurrence === 'installment' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Número de Parcelas</label>
             <input
@@ -153,7 +153,7 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
           </div>
         )}
 
-        {formData.recurrence === 'recurring' && !initialData && (
+        {formData.recurrence === 'recurring' && (
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Repetir por (meses)</label>
