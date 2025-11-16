@@ -23,14 +23,111 @@ const Financeiro: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filtros
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [periodFilter, setPeriodFilter] = useState<'current' | 'next' | 'last' | 'custom'>('current');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
   const [modalState, setModalState] = useState<{
     type: 'new' | 'edit' | null;
     record: FinancialRecord | null;
   }>({ type: null, record: null });
+
+  // Função para criar automaticamente os próximos meses de contas recorrentes
+  const createNextMonthRecurringEntries = useCallback(async () => {
+    if (!user?.companyId) return;
+
+    console.log('🔄 Verificando contas recorrentes que precisam de novos meses...');
+
+    // Buscar todos os grupos de recorrência (usando recurrence_id)
+    const { data: recurringGroups, error: groupsError } = await supabase
+      .from('financial_records')
+      .select('recurrence_id, recurrence')
+      .eq('company_id', user.companyId)
+      .eq('recurrence', 'recurring')
+      .not('recurrence_id', 'is', null);
+
+    if (groupsError) {
+      console.error('❌ Erro ao buscar grupos recorrentes:', groupsError);
+      return;
+    }
+
+    // Obter IDs únicos de recorrência
+    const uniqueRecurrenceIds = [...new Set(recurringGroups?.map(r => r.recurrence_id).filter(Boolean))];
+    console.log(`📋 Encontrados ${uniqueRecurrenceIds.length} grupos de recorrência`);
+
+    for (const recurrenceId of uniqueRecurrenceIds) {
+      if (!recurrenceId) continue; // Skip null values
+
+      // Buscar todos os registros deste grupo de recorrência
+      const { data: groupRecords, error: recordsError } = await supabase
+        .from('financial_records')
+        .select('*')
+        .eq('recurrence_id', recurrenceId)
+        .order('due_date', { ascending: false });
+
+      if (recordsError || !groupRecords || groupRecords.length === 0) continue;
+
+      const lastRecord = groupRecords[0]; // Último registro (mais recente)
+      const lastDueDate = new Date(lastRecord.due_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Calcular quantos meses à frente temos
+      const monthsDiff = (lastDueDate.getFullYear() - today.getFullYear()) * 12 +
+                         (lastDueDate.getMonth() - today.getMonth());
+
+      // Se temos menos de 2 meses à frente, criar mais um mês
+      if (monthsDiff < 2) {
+        console.log(`➕ Criando próximo mês para recorrência ${recurrenceId}`);
+
+        // Calcular próxima data de vencimento
+        const nextDueDate = new Date(lastDueDate);
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+
+        // Verificar se já existe um registro para esta data
+        const { data: existingRecord } = await supabase
+          .from('financial_records')
+          .select('id')
+          .eq('recurrence_id', recurrenceId)
+          .eq('due_date', nextDueDate.toISOString().split('T')[0])
+          .single();
+
+        if (existingRecord) {
+          console.log(`⏭️ Registro já existe para ${nextDueDate.toISOString().split('T')[0]}`);
+          continue;
+        }
+
+        // Criar novo registro para o próximo mês
+        const nextMonthNumber = groupRecords.length + 1;
+        const baseDescription = lastRecord.description.replace(/\s*\(Mês \d+\)|\s*\(\d+\/\d+\)/, '');
+
+        const newRecord = {
+          company_id: user.companyId,
+          type: lastRecord.type,
+          description: `${baseDescription} (Mês ${nextMonthNumber})`,
+          amount: lastRecord.amount,
+          due_date: nextDueDate.toISOString().split('T')[0],
+          status: 'pending',
+          category_id: lastRecord.category_id,
+          subcategory_id: lastRecord.subcategory_id,
+          recurrence: 'recurring',
+          recurrence_id: recurrenceId,
+          related_trip_id: lastRecord.related_trip_id
+        };
+
+        const { error: insertError } = await supabase
+          .from('financial_records')
+          .insert([newRecord]);
+
+        if (insertError) {
+          console.error(`❌ Erro ao criar próximo mês para recorrência ${recurrenceId}:`, insertError);
+        } else {
+          console.log(`✅ Próximo mês criado com sucesso para ${nextDueDate.toISOString().split('T')[0]}`);
+        }
+      }
+    }
+  }, [user?.companyId]);
 
   const fetchData = useCallback(async () => {
     if (!user?.companyId) {
@@ -41,6 +138,9 @@ const Financeiro: React.FC = () => {
 
     console.log('🔄 Financeiro: Buscando dados para company_id:', user.companyId);
     setLoading(true);
+
+    // Criar próximos meses de contas recorrentes antes de buscar os dados
+    await createNextMonthRecurringEntries();
 
     const [recordsRes, tripsRes, categoriesRes, subcategoriesRes] = await Promise.all([
       supabase.from('financial_records').select('*, category:financial_categories(name), subcategory:financial_subcategories(name)').eq('company_id', user.companyId).order('due_date', { ascending: true }),
@@ -73,7 +173,7 @@ const Financeiro: React.FC = () => {
     setSubcategories(subcategoriesRes.data as FinancialSubcategory[] || []);
 
     setLoading(false);
-  }, [user?.companyId]);
+  }, [user?.companyId, createNextMonthRecurringEntries]);
 
   useEffect(() => {
     fetchData();
@@ -159,11 +259,12 @@ const Financeiro: React.FC = () => {
             const recordsToInsert = [];
             const recurrenceId = crypto.randomUUID();
 
-            // Se installments = -1, é infinito. Criar 120 meses (10 anos) como padrão
-            const monthsToCreate = installments === -1 ? 120 : (installments || 12);
+            // Para recorrências, criar apenas 3 meses à frente inicialmente
+            // O sistema criará automaticamente os próximos meses quando necessário
             const isInfinite = installments === -1;
+            const monthsToCreate = isInfinite ? 3 : Math.min(installments || 12, 3);
 
-            console.log(`🔄 Modo RECORRENTE - Criando ${monthsToCreate} meses${isInfinite ? ' (INFINITO)' : ''}`);
+            console.log(`🔄 Modo RECORRENTE - Criando ${monthsToCreate} meses iniciais${isInfinite ? ' (INFINITO - mais meses serão criados automaticamente)' : ''}`);
 
             for (let i = 0; i < monthsToCreate; i++) {
                 const dueDate = new Date(cleanedData.due_date!);
@@ -171,7 +272,7 @@ const Financeiro: React.FC = () => {
                 recordsToInsert.push({
                     ...cleanedData,
                     company_id: user.companyId,
-                    description: isInfinite ? `${cleanedData.description} (Mês ${i + 1})` : `${cleanedData.description} (${i + 1}/${monthsToCreate})`,
+                    description: isInfinite ? `${cleanedData.description} (Mês ${i + 1})` : `${cleanedData.description} (${i + 1}/${installments})`,
                     due_date: dueDate.toISOString().split('T')[0],
                     recurrence_id: recurrenceId,
                 });
@@ -189,11 +290,8 @@ const Financeiro: React.FC = () => {
               console.error("  - details:", error.details);
               console.error("  - hint:", error.hint);
             } else {
-              console.log(`✅ Recorrência inserida com sucesso: ${insertedData?.length} registros${isInfinite ? ' (infinito - 10 anos gerados)' : ''}`);
+              console.log(`✅ Recorrência inserida com sucesso: ${insertedData?.length} registros${isInfinite ? ' (infinito - mais meses serão criados automaticamente)' : ''}`);
               console.log("  - Primeiro registro:", insertedData?.[0]);
-              if (isInfinite) {
-                toast.success(`Recorrência infinita criada! 120 meses (10 anos) foram gerados inicialmente.`);
-              }
             }
         } else {
             const recordToInsert = {
@@ -235,9 +333,57 @@ const Financeiro: React.FC = () => {
 
   const closeModal = () => setModalState({ type: null, record: null });
 
+  // Helper function to calculate date range based on period filter
+  const getDateRangeForPeriod = useCallback((period: 'current' | 'next' | 'last' | 'custom') => {
+    const today = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (period) {
+      case 'current':
+        // First day of current month to last day of current month
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case 'next':
+        // First day of next month to last day of next month
+        start = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+        break;
+      case 'last':
+        // First day of last month to last day of last month
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      case 'custom':
+        // Use custom dates or return null if not set
+        if (!customStartDate || !customEndDate) return null;
+        return {
+          startDate: customStartDate,
+          endDate: customEndDate
+        };
+    }
+
+    // Format dates as YYYY-MM-DD
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    return {
+      startDate: formatDate(start),
+      endDate: formatDate(end)
+    };
+  }, [customStartDate, customEndDate]);
+
   const filteredRecords = useMemo(() => {
     const typeFilter = view === 'pagar' ? 'payable' : 'receivable';
     console.log(`🔍 Filtrando registros - View: ${view}, Type Filter: ${typeFilter}, Total Records: ${records.length}`);
+
+    // Get date range based on period filter
+    const dateRange = getDateRangeForPeriod(periodFilter);
 
     const filtered = records.filter(record => {
       // Filtro de tipo (pagar/receber)
@@ -248,14 +394,14 @@ const Financeiro: React.FC = () => {
         return false;
       }
 
-      // Filtro de data inicial
-      if (startDate && record.due_date < startDate) {
-        return false;
-      }
-
-      // Filtro de data final
-      if (endDate && record.due_date > endDate) {
-        return false;
+      // Filtro de data (apenas se houver range válido)
+      if (dateRange) {
+        if (record.due_date < dateRange.startDate) {
+          return false;
+        }
+        if (record.due_date > dateRange.endDate) {
+          return false;
+        }
       }
 
       // Filtro de categoria
@@ -275,7 +421,7 @@ const Financeiro: React.FC = () => {
 
     console.log(`✅ Registros filtrados e ordenados: ${sorted.length}`, sorted);
     return sorted;
-  }, [records, view, searchTerm, startDate, endDate, selectedCategory]);
+  }, [records, view, searchTerm, periodFilter, customStartDate, customEndDate, selectedCategory, getDateRangeForPeriod]);
 
   const getStatusColor = (status: string) => ({
     'paid': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
@@ -401,28 +547,48 @@ const Financeiro: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Data Inicial
+                  Período
                 </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                <select
+                  value={periodFilter}
+                  onChange={(e) => setPeriodFilter(e.target.value as 'current' | 'next' | 'last' | 'custom')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-                />
+                >
+                  <option value="current">Mês Atual</option>
+                  <option value="next">Próximo Mês</option>
+                  <option value="last">Último Mês</option>
+                  <option value="custom">Personalizado</option>
+                </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Data Final
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-                />
-              </div>
+              {periodFilter === 'custom' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Data Inicial
+                    </label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Data Final
+                    </label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      min={customStartDate}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -442,13 +608,14 @@ const Financeiro: React.FC = () => {
             </div>
 
             {/* Linha 3: Botão Limpar e Contador */}
-            {(searchTerm || startDate || endDate || selectedCategory) && (
+            {(searchTerm || periodFilter !== 'current' || customStartDate || customEndDate || selectedCategory) && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-dark-border">
                 <button
                   onClick={() => {
                     setSearchTerm('');
-                    setStartDate('');
-                    setEndDate('');
+                    setPeriodFilter('current');
+                    setCustomStartDate('');
+                    setCustomEndDate('');
                     setSelectedCategory('');
                   }}
                   className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
@@ -466,7 +633,7 @@ const Financeiro: React.FC = () => {
             <div className="flex justify-center items-center h-64"><Loader className="h-8 w-8 animate-spin text-primary" /></div>
           ) : (
             <>
-              {!searchTerm && !startDate && !endDate && !selectedCategory && (
+              {!searchTerm && periodFilter === 'current' && !customStartDate && !customEndDate && !selectedCategory && (
                 <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                   Total: {filteredRecords.length} {filteredRecords.length === 1 ? 'registro' : 'registros'}
                 </div>
