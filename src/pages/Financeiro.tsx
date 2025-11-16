@@ -144,7 +144,7 @@ const Financeiro: React.FC = () => {
 
     const [recordsRes, tripsRes, categoriesRes, subcategoriesRes] = await Promise.all([
       supabase.from('financial_records').select('*, category:financial_categories(name), subcategory:financial_subcategories(name)').eq('company_id', user.companyId).order('due_date', { ascending: true }),
-      supabase.from('trips').select('id, origin, destination, start_date').eq('company_id', user.companyId),
+      supabase.from('trips').select('id, origin, destination, start_date, status, service_number').eq('company_id', user.companyId),
       supabase.from('financial_categories').select('*').eq('company_id', user.companyId),
       supabase.from('financial_subcategories').select('*').eq('company_id', user.companyId)
     ]);

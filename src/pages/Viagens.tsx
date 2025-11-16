@@ -107,6 +107,7 @@ const Viagens: React.FC = () => {
     hidden: t.hidden || false,
     email_sent: t.email_sent || false,
     email_sent_at: t.email_sent_at,
+    service_number: t.service_number,
   })) as Trip[];
 
   const handleSaveTrip = async (tripData: Partial<Trip>) => {
@@ -320,20 +321,30 @@ const Viagens: React.FC = () => {
   };
 
   const columns = [
-    { key: 'startDate', header: 'Data', render: (date: string) => {
-      if (!date) return 'Sem data';
-      try {
-        const dateOnly = date.split('T')[0];
-        const [year, month, day] = dateOnly.split('-').map(Number);
-        if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) {
-          return 'Data inválida';
+    {
+      key: 'service_number',
+      header: 'Nº',
+      render: (serviceNumber: number, trip: Trip) => {
+        if (!trip.startDate) return <span className="text-gray-400">-</span>;
+        try {
+          const dateOnly = trip.startDate.split('T')[0];
+          const [year, month, day] = dateOnly.split('-').map(Number);
+          if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) {
+            return <span className="text-gray-400">Data inválida</span>;
+          }
+          const dateObj = new Date(year, month - 1, day);
+          const dateStr = dateObj.toLocaleDateString('pt-BR');
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold text-primary">#{serviceNumber || '---'}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{dateStr}</span>
+            </div>
+          );
+        } catch (error) {
+          return <span className="text-gray-400">Data inválida</span>;
         }
-        const dateObj = new Date(year, month - 1, day);
-        return dateObj.toLocaleDateString('pt-BR');
-      } catch (error) {
-        return 'Data inválida';
       }
-    }},
+    },
     {
       key: 'clientName',
       header: 'Cliente',

@@ -300,6 +300,19 @@ const NovoServico: React.FC = () => {
 
     console.log('✅ Validação passou! Criando serviço...');
 
+    // Obter o próximo número de serviço para a empresa
+    const { data: nextNumberData, error: numberError } = await supabase
+      .rpc('get_next_service_number', { p_company_id: user?.companyId });
+
+    if (numberError) {
+      console.error('❌ Erro ao obter próximo número de serviço:', numberError);
+      toast.error('Erro ao gerar número do serviço');
+      return;
+    }
+
+    const serviceNumber = nextNumberData || 1;
+    console.log('📋 Número do serviço:', serviceNumber);
+
     const attachmentsToSave = (formData.attachments || []).map(att => ({
       id: att.id,
       name: att.name,
@@ -326,10 +339,11 @@ const NovoServico: React.FC = () => {
       status: 'scheduled',
       distance: formData.distance || 0,
       attachments: attachmentsToSave,
+      service_number: serviceNumber,
     };
 
     await createTrip(dataToSave as any);
-    toast.success('Serviço cadastrado com sucesso!');
+    toast.success(`Serviço #${serviceNumber} cadastrado com sucesso!`);
     navigate('/servicos');
   };
 

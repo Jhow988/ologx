@@ -209,9 +209,10 @@ const NewFinancialRecordForm: React.FC<NewFinancialRecordFormProps> = ({ initial
                 cancelled: 'Cancelado'
               };
               const statusText = statusMap[trip.status] || trip.status;
+              const serviceNumber = trip.service_number ? `#${trip.service_number}` : '';
               return (
                 <option key={trip.id} value={trip.id}>
-                  {date} - {trip.origin} → {trip.destination} ({statusText})
+                  {serviceNumber} {date} - {trip.origin} → {trip.destination} ({statusText})
                 </option>
               );
             })}

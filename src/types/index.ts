@@ -80,6 +80,7 @@ export interface Trip {
   hidden?: boolean;
   email_sent?: boolean;
   email_sent_at?: string;
+  service_number?: number;
   // Joined data
   clientName?: string;
   vehiclePlate?: string;
