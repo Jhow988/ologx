@@ -47,6 +47,7 @@ interface ServiceRecord {
   cte: string;
   nf: string;
   client: string;
+  requester: string;
   service: string;
   city: string;
   vehicle: string;
@@ -122,7 +123,8 @@ const Fechamento: React.FC = () => {
           date: new Date(trip.start_date).toLocaleDateString('pt-BR'),
           cte: trip.cte || '-',
           nf: trip.nf || '-',
-          client: trip.requester || client?.name || '-',
+          client: client?.name || '-',
+          requester: trip.requester || '-',
           service: `${trip.origin} → ${trip.destination}`,
           city: client?.city || '-',
           vehicle: vehicle ? `${vehicle.plate}` : '-',
@@ -188,6 +190,7 @@ const Fechamento: React.FC = () => {
         service.cte,
         service.nf,
         service.client,
+        service.requester,
         service.service,
         service.city,
         service.vehicle,
@@ -200,40 +203,41 @@ const Fechamento: React.FC = () => {
       // Add table
       autoTable(doc, {
         startY: 42,
-        head: [['Data', 'CT-e', 'NF', 'Solicitante', 'Serviço', 'Cidade', 'Veículo', 'Motorista', 'Frete', 'Seguro', 'Valor']],
+        head: [['Data', 'CT-e', 'NF', 'Cliente', 'Solicitante', 'Serviço', 'Cidade', 'Veículo', 'Motorista', 'Frete', 'Seguro', 'Valor']],
         body: tableData,
-        foot: [['', '', '', '', '', '', '', '', '', 'TOTAL GERAL', formatCurrency(totalValue)]],
+        foot: [['', '', '', '', '', '', '', '', '', '', 'TOTAL', formatCurrency(totalValue)]],
         theme: 'striped',
         headStyles: {
           fillColor: [66, 139, 202],
           textColor: [255, 255, 255],
-          fontSize: 8,
+          fontSize: 7,
           fontStyle: 'bold',
           halign: 'center'
         },
         bodyStyles: {
-          fontSize: 7,
-          cellPadding: 2
+          fontSize: 6,
+          cellPadding: 1.5
         },
         footStyles: {
           fillColor: [240, 240, 240],
           textColor: [0, 0, 0],
-          fontSize: 8,
+          fontSize: 7,
           fontStyle: 'bold',
           halign: 'right'
         },
         columnStyles: {
-          0: { cellWidth: 18 }, // Data
-          1: { cellWidth: 20 }, // CT-e
-          2: { cellWidth: 20 }, // NF
-          3: { cellWidth: 35 }, // Solicitante
-          4: { cellWidth: 40 }, // Serviço
-          5: { cellWidth: 25 }, // Cidade
-          6: { cellWidth: 20 }, // Veículo
-          7: { cellWidth: 30 }, // Motorista
-          8: { cellWidth: 25 }, // Frete
-          9: { cellWidth: 20 }, // Seguro
-          10: { cellWidth: 23, halign: 'right' } // Valor
+          0: { cellWidth: 16 }, // Data
+          1: { cellWidth: 18 }, // CT-e
+          2: { cellWidth: 18 }, // NF
+          3: { cellWidth: 28 }, // Cliente
+          4: { cellWidth: 28 }, // Solicitante
+          5: { cellWidth: 35 }, // Serviço
+          6: { cellWidth: 22 }, // Cidade
+          7: { cellWidth: 18 }, // Veículo
+          8: { cellWidth: 25 }, // Motorista
+          9: { cellWidth: 20 }, // Frete
+          10: { cellWidth: 18 }, // Seguro
+          11: { cellWidth: 20, halign: 'right' } // Valor
         },
         margin: { left: 14, right: 14 }
       });
@@ -356,6 +360,7 @@ const Fechamento: React.FC = () => {
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Data</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">CT-e</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">NF</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Cliente</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Solicitante</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Serviço</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Cidade</th>
@@ -369,7 +374,7 @@ const Fechamento: React.FC = () => {
             <tbody>
               {services.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-8 text-gray-500 dark:text-dark-text-secondary">
+                  <td colSpan={12} className="text-center py-8 text-gray-500 dark:text-dark-text-secondary">
                     Nenhum serviço encontrado para o período selecionado
                   </td>
                 </tr>
@@ -383,6 +388,7 @@ const Fechamento: React.FC = () => {
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.cte}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.nf}</td>
                     <td className="py-3 px-4 text-sm text-blue-600 dark:text-blue-400 font-medium">{service.client}</td>
+                    <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.requester}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.service}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.city}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.vehicle}</td>
@@ -399,7 +405,7 @@ const Fechamento: React.FC = () => {
             {services.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-bg-secondary">
-                  <td colSpan={10} className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-dark-text text-right">
+                  <td colSpan={11} className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-dark-text text-right">
                     TOTAL
                   </td>
                   <td className="py-3 px-4 text-sm text-right font-bold text-primary">
