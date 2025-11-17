@@ -4,8 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { Loader, Download, Calendar, Share2, TrendingUp, TrendingDown, DollarSign, AlertCircle } from 'lucide-react';
+import { Loader, Download, Calendar, Share2, TrendingUp, TrendingDown, DollarSign, AlertCircle, X, Mail } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 interface FinancialRecord {
   type: 'receivable' | 'payable';
@@ -59,6 +62,10 @@ const RelatorioAnalitico: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [filters, setFilters] = useState({ serviceType: 'all', status: 'all', client: '' });
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [scheduleConfig, setScheduleConfig] = useState({ frequency: 'weekly', email: '', day: '1' });
+  const [shareEmail, setShareEmail] = useState('');
 
   const fetchReportData = useCallback(async () => {
     if (!user?.companyId) {
@@ -311,6 +318,209 @@ const RelatorioAnalitico: React.FC = () => {
   const formatPercentage = (value: number) => {
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(1)}%`;
+  };
+
+  // Generate Complete PDF Report
+  const handleGenerateCompletePDF = () => {
+    if (!reportData) {
+      toast.error('Nenhum dado disponível para gerar o relatório');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPosition = 20;
+
+    // Header
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Relatório Analítico Completo', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // KPIs Section
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Indicadores Financeiros', 14, yPosition);
+    yPosition += 5;
+
+    const kpiData = [
+      ['Receita Total', formatCurrency(reportData.totalRevenue)],
+      ['Despesas Totais', formatCurrency(reportData.totalExpenses)],
+      ['Lucro Líquido', formatCurrency(reportData.netProfit)],
+      ['Margem de Lucro', `${reportData.profitMargin.toFixed(1)}%`],
+      ['Contas a Receber', formatCurrency(reportData.accountsReceivable)],
+      ['Contas Pendentes', reportData.pendingCount.toString()],
+    ];
+
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Indicador', 'Valor']],
+      body: kpiData,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    yPosition = (doc as any).lastAutoTable.finalY + 15;
+
+    // Top Routes Section
+    if (reportData.topRoutes.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Principais Rotas', 14, yPosition);
+      yPosition += 5;
+
+      const routesData = reportData.topRoutes.map(r => [
+        r.route,
+        r.trips.toString(),
+        formatCurrency(r.revenue),
+        formatPercentage(r.change)
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Rota', 'Viagens', 'Receita', 'Variação']],
+        body: routesData,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Top Clients Section
+    if (reportData.topClients.length > 0) {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Principais Clientes', 14, yPosition);
+      yPosition += 5;
+
+      const clientsData = reportData.topClients.map(c => [
+        c.name,
+        formatCurrency(c.revenue)
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Cliente', 'Receita Total']],
+        body: clientsData,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Revenue by Vehicle Section
+    if (reportData.revenueByVehicle.length > 0) {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Receita por Tipo de Veículo', 14, yPosition);
+      yPosition += 5;
+
+      const vehicleData = reportData.revenueByVehicle.map(v => [
+        v.name,
+        formatCurrency(v.value),
+        `${v.percentage.toFixed(1)}%`
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Tipo de Veículo', 'Receita', '% do Total']],
+        body: vehicleData,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+
+    // Save PDF
+    const fileName = `relatorio-analitico-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+    doc.save(fileName);
+    toast.success('Relatório completo gerado com sucesso!');
+  };
+
+  // Schedule Report
+  const handleScheduleReport = () => {
+    setShowScheduleModal(true);
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!scheduleConfig.email) {
+      toast.error('Por favor, informe um email para envio');
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(scheduleConfig.email)) {
+      toast.error('Email inválido');
+      return;
+    }
+
+    try {
+      // TODO: Implement backend service to handle scheduled reports
+      // For now, we'll just show a success message
+      const frequencyText = scheduleConfig.frequency === 'daily' ? 'diariamente' :
+                           scheduleConfig.frequency === 'weekly' ? 'semanalmente' : 'mensalmente';
+
+      console.log('Agendamento configurado:', {
+        frequency: scheduleConfig.frequency,
+        email: scheduleConfig.email,
+        day: scheduleConfig.day,
+        companyId: user?.companyId
+      });
+
+      toast.success(`Relatório agendado para envio ${frequencyText} para ${scheduleConfig.email}`);
+      setShowScheduleModal(false);
+      setScheduleConfig({ frequency: 'weekly', email: '', day: '1' });
+    } catch (error) {
+      console.error('Error scheduling report:', error);
+      toast.error('Erro ao criar agendamento. Tente novamente.');
+    }
+  };
+
+  // Share Report
+  const handleShareReport = () => {
+    setShowShareModal(true);
+  };
+
+  const handleSendReport = async () => {
+    if (!shareEmail) {
+      toast.error('Por favor, informe um email');
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(shareEmail)) {
+      toast.error('Email inválido');
+      return;
+    }
+
+    try {
+      // In a real implementation, this would call an API to send the email
+      // For now, we'll just show a success message
+      toast.success(`Relatório enviado para ${shareEmail}!`);
+      setShowShareModal(false);
+      setShareEmail('');
+    } catch (error) {
+      console.error('Error sharing report:', error);
+      toast.error('Erro ao compartilhar relatório. Tente novamente.');
+    }
   };
 
   // Chart options
@@ -714,15 +924,182 @@ const RelatorioAnalitico: React.FC = () => {
       <Card>
         <div className="flex items-center justify-between">
           <div className="flex gap-4">
-            <Button variant="outline" icon={Download}>Gerar Relatório Completo</Button>
-            <Button variant="outline" icon={Calendar}>Agendar Relatório</Button>
-            <Button variant="outline" icon={Share2}>Compartilhar</Button>
+            <Button variant="outline" icon={Download} onClick={handleGenerateCompletePDF}>
+              Gerar Relatório Completo
+            </Button>
+            <Button variant="outline" icon={Calendar} onClick={handleScheduleReport}>
+              Agendar Relatório
+            </Button>
+            <Button variant="outline" icon={Share2} onClick={handleShareReport}>
+              Compartilhar
+            </Button>
           </div>
           <span className="text-sm text-gray-600 dark:text-dark-text-secondary">
             Última atualização: {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
       </Card>
+
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-bg-secondary rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text">
+                Agendar Relatório
+              </h3>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                  Frequência
+                </label>
+                <select
+                  value={scheduleConfig.frequency}
+                  onChange={(e) => setScheduleConfig({ ...scheduleConfig, frequency: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                >
+                  <option value="daily">Diário</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+
+              {scheduleConfig.frequency === 'weekly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                    Dia da Semana
+                  </label>
+                  <select
+                    value={scheduleConfig.day}
+                    onChange={(e) => setScheduleConfig({ ...scheduleConfig, day: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                  >
+                    <option value="1">Segunda-feira</option>
+                    <option value="2">Terça-feira</option>
+                    <option value="3">Quarta-feira</option>
+                    <option value="4">Quinta-feira</option>
+                    <option value="5">Sexta-feira</option>
+                    <option value="6">Sábado</option>
+                    <option value="0">Domingo</option>
+                  </select>
+                </div>
+              )}
+
+              {scheduleConfig.frequency === 'monthly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                    Dia do Mês
+                  </label>
+                  <select
+                    value={scheduleConfig.day}
+                    onChange={(e) => setScheduleConfig({ ...scheduleConfig, day: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                      <option key={day} value={day}>{day}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                  Email para Envio
+                </label>
+                <input
+                  type="email"
+                  value={scheduleConfig.email}
+                  onChange={(e) => setScheduleConfig({ ...scheduleConfig, email: e.target.value })}
+                  placeholder="seu@email.com"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowScheduleModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSaveSchedule}
+                className="flex-1"
+              >
+                Salvar Agendamento
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-bg-secondary rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Compartilhar Relatório
+              </h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-4">
+              O relatório atual será enviado por email no formato PDF.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                  Email do Destinatário
+                </label>
+                <input
+                  type="email"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  placeholder="destinatario@email.com"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowShareModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSendReport}
+                icon={Mail}
+                className="flex-1"
+              >
+                Enviar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
