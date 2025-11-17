@@ -10,7 +10,8 @@ import NovoServico from './pages/NovoServico';
 import EditarServico from './pages/EditarServico';
 import Manutencao from './pages/Manutencao';
 import Financeiro from './pages/Financeiro';
-import Relatorios from './pages/Relatorios';
+import RelatorioSintetico from './pages/RelatorioSintetico';
+import RelatorioAnalitico from './pages/RelatorioAnalitico';
 import Fechamento from './pages/Fechamento';
 import Alertas from './pages/Alertas';
 import Empresa from './pages/Configuracoes/Empresa';
@@ -91,7 +92,9 @@ const AppRoutes: React.FC = () => {
         <Route path="manutencao" element={<Manutencao />} />
         <Route path="financeiro" element={<Navigate to="/financeiro/pagar" replace />} />
         <Route path="financeiro/:view" element={<Financeiro />} />
-        <Route path="relatorios" element={<Relatorios />} />
+        <Route path="relatorios" element={<Navigate to="/relatorios/sintetico" replace />} />
+        <Route path="relatorios/sintetico" element={<RelatorioSintetico />} />
+        <Route path="relatorios/analitico" element={<RelatorioAnalitico />} />
         <Route path="fechamento" element={<Fechamento />} />
         <Route path="alertas" element={<Alertas />} />
         <Route path="configuracoes" element={<Navigate to="/configuracoes/empresa" replace />} />

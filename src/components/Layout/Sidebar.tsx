@@ -12,7 +12,6 @@ import {
   UserPlus,
   Car,
   ChevronDown,
-  ClipboardList,
   TrendingUp,
   TrendingDown,
   Tags,
@@ -21,7 +20,9 @@ import {
   Building,
   Shield,
   Calendar,
-  Activity
+  Activity,
+  PieChart,
+  LineChart
 } from 'lucide-react';
 import { Can } from '../../contexts/AuthContext';
 
@@ -56,7 +57,16 @@ const menuItems = [
       { path: '/financeiro/receber', icon: TrendingUp, label: 'Contas a Receber', permission: 'financeiro:ver_tudo' },
     ],
   },
-  { path: '/relatorios', icon: BarChart3, label: 'Relatórios', permission: 'relatorios:ver_todos' },
+  {
+    path: '/relatorios',
+    icon: BarChart3,
+    label: 'Relatórios',
+    permission: 'relatorios:ver_todos',
+    submenu: [
+      { path: '/relatorios/sintetico', icon: PieChart, label: 'Sintético', permission: 'relatorios:ver_todos' },
+      { path: '/relatorios/analitico', icon: LineChart, label: 'Analítico', permission: 'relatorios:ver_todos' },
+    ],
+  },
   { path: '/alertas', icon: Bell, label: 'Alertas', permission: 'alertas:ver' }, // Assuming permission
   {
     path: '/configuracoes',
