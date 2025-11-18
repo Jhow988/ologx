@@ -328,7 +328,7 @@ const Viagens: React.FC = () => {
     {
       key: 'service_number',
       header: 'Nº',
-      render: (serviceNumber: number, trip: Trip) => (
+      render: (serviceNumber: number) => (
         <span className="font-semibold text-primary">#{serviceNumber || '---'}</span>
       )
     },
@@ -351,17 +351,10 @@ const Viagens: React.FC = () => {
       }
     },
     {
-      key: 'cte',
-      header: 'CT-e',
-      render: (cte: string) => (
-        <span className="text-sm">{cte || '-'}</span>
-      )
-    },
-    {
       key: 'clientName',
       header: 'Empresa',
       render: (name: string) => (
-        <div className="max-w-[150px] truncate" title={name}>{name}</div>
+        <div className="max-w-[200px] truncate" title={name}>{name}</div>
       )
     },
     {
@@ -375,16 +368,9 @@ const Viagens: React.FC = () => {
       key: 'description',
       header: 'Serviço',
       render: (description: string) => (
-        <div className="max-w-[200px] truncate" title={description || '-'}>
+        <div className="max-w-[250px] truncate" title={description || '-'}>
           {description || '-'}
         </div>
-      )
-    },
-    {
-      key: 'destination',
-      header: 'Cidade',
-      render: (destination: string) => (
-        <span className="text-sm">{destination || '-'}</span>
       )
     },
     {
@@ -394,27 +380,6 @@ const Viagens: React.FC = () => {
         <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${vehicleType ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : 'text-gray-400'}`}>
           {vehicleType || '-'}
         </span>
-      )
-    },
-    {
-      key: 'driverName',
-      header: 'Motorista',
-      render: (driverName: string) => (
-        <span className="text-sm">{driverName || '-'}</span>
-      )
-    },
-    {
-      key: 'freightType',
-      header: 'Frete',
-      render: (freightType: string) => (
-        <span className="text-sm">{freightType || '-'}</span>
-      )
-    },
-    {
-      key: 'insuranceInfo',
-      header: 'Seguro',
-      render: (insuranceInfo: string) => (
-        <span className="text-sm">{insuranceInfo ? 'R$ ' + insuranceInfo : 'R$0'}</span>
       )
     },
     {
@@ -436,21 +401,21 @@ const Viagens: React.FC = () => {
             size="sm"
             icon={Eye}
             onClick={() => setModalState({ type: 'details', trip })}
-            title="Visualizar detalhes"
+            title="Ver detalhes"
           />
           <Button
             variant="ghost"
             size="sm"
             icon={Pencil}
             onClick={() => navigate(`/servicos/editar/${trip.id}`)}
-            title="Editar serviço"
+            title="Editar"
           />
           <Button
             variant="ghost"
             size="sm"
             icon={trip.hidden ? Eye : EyeOff}
             onClick={() => handleToggleHidden(trip)}
-            title={trip.hidden ? "Reexibir serviço" : "Ocultar serviço"}
+            title={trip.hidden ? "Reexibir" : "Ocultar"}
             className={trip.hidden ? "text-gray-400" : ""}
           />
         </div>
