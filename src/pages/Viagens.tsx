@@ -101,6 +101,7 @@ const Viagens: React.FC = () => {
     freight_value: t.freight_value || 0,
     freightType: t.freight_type,
     insuranceInfo: t.insurance_info,
+    description: t.description,
     status: t.status,
     cte: t.cte,
     nf: t.nf,
@@ -371,11 +372,11 @@ const Viagens: React.FC = () => {
       )
     },
     {
-      key: 'origin',
+      key: 'description',
       header: 'Serviço',
-      render: (origin: string, trip: Trip) => (
-        <div className="max-w-[180px] truncate" title={`${origin} → ${trip.destination}`}>
-          {origin || '-'} → {trip.destination || '-'}
+      render: (description: string) => (
+        <div className="max-w-[200px] truncate" title={description || '-'}>
+          {description || '-'}
         </div>
       )
     },
