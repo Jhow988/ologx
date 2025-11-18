@@ -271,30 +271,17 @@ const NovoServico: React.FC = () => {
 
     console.log('🎯 SUBMIT NovoServico - formData:', formData);
 
-    // Validação detalhada
+    // Validação - apenas campos obrigatórios
     const errors: string[] = [];
 
-    if (!formData.startDate) errors.push('Data');
+    if (!formData.startDate) errors.push('Data do Serviço');
     if (!formData.clientId) errors.push('Empresa');
-    if (!formData.freight_value || formData.freight_value <= 0) errors.push('Valor');
     if (!formData.requester || formData.requester.trim() === '') errors.push('Solicitante');
-    // Origem e Destino não são mais obrigatórios (CEP opcional)
-    if (!formData.vehicleId) errors.push('Veículo');
-    if (!formData.driverId) errors.push('Motorista');
+    if (!formData.description || formData.description.trim() === '') errors.push('Descrição do Serviço');
 
     if (errors.length > 0) {
       console.error('❌ Validação falhou:', errors);
-      toast.error(`Preencha os campos: ${errors.join(', ')}`);
-      return;
-    }
-
-    if (vehicles.length === 0) {
-      toast.error('Não há veículos ativos disponíveis. Ative um veículo antes de criar um serviço.');
-      return;
-    }
-
-    if (drivers.length === 0) {
-      toast.error('Não há motoristas ativos disponíveis. Ative um motorista antes de criar um serviço.');
+      toast.error(`Preencha os campos obrigatórios: ${errors.join(', ')}`);
       return;
     }
 
@@ -365,8 +352,8 @@ const NovoServico: React.FC = () => {
       {/* Form */}
       <form onSubmit={handleSubmit}>
         {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
-        <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
-          ✅ Versão: 2025-11-15 v4.2 | Solicitante Obrigatório + CEP Opcional
+        <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
+          ✅ Versão: 2025-11-18 v5.0 | Campos Obrigatórios: Data, Empresa, Solicitante e Descrição
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
@@ -521,7 +508,7 @@ const NovoServico: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo</label>
                 <select
                   name="vehicleId"
                   value={formData.vehicleId}
@@ -537,7 +524,7 @@ const NovoServico: React.FC = () => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista</label>
                 <select
                   name="driverId"
                   value={formData.driverId}
@@ -567,7 +554,7 @@ const NovoServico: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Valor do Frete *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Valor do Frete</label>
                 <input
                   type="text"
                   name="freight_value"
@@ -602,7 +589,7 @@ const NovoServico: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Descrição do Serviço</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Descrição do Serviço *</label>
                 <textarea
                   name="description"
                   value={formData.description}
