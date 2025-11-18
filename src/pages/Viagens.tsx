@@ -91,6 +91,7 @@ const Viagens: React.FC = () => {
     clientName: t.client?.name || 'N/A',
     vehicleId: t.vehicle_id,
     vehiclePlate: t.vehicle?.plate || 'N/A',
+    vehicleType: t.vehicle_type,
     driverId: t.driver_id,
     driverName: t.driver?.full_name || 'N/A',
     startDate: t.start_date,
@@ -98,6 +99,8 @@ const Viagens: React.FC = () => {
     origin: t.origin,
     destination: t.destination,
     freight_value: t.freight_value || 0,
+    freightType: t.freight_type,
+    insuranceInfo: t.insurance_info,
     status: t.status,
     cte: t.cte,
     nf: t.nf,
@@ -324,66 +327,103 @@ const Viagens: React.FC = () => {
     {
       key: 'service_number',
       header: 'Nº',
-      render: (serviceNumber: number, trip: Trip) => {
-        if (!trip.startDate) return <span className="text-gray-400">-</span>;
+      render: (serviceNumber: number, trip: Trip) => (
+        <span className="font-semibold text-primary">#{serviceNumber || '---'}</span>
+      )
+    },
+    {
+      key: 'startDate',
+      header: 'Data',
+      render: (startDate: string) => {
+        if (!startDate) return <span className="text-gray-400">-</span>;
         try {
-          const dateOnly = trip.startDate.split('T')[0];
+          const dateOnly = startDate.split('T')[0];
           const [year, month, day] = dateOnly.split('-').map(Number);
           if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) {
-            return <span className="text-gray-400">Data inválida</span>;
+            return <span className="text-gray-400">-</span>;
           }
           const dateObj = new Date(year, month - 1, day);
-          const dateStr = dateObj.toLocaleDateString('pt-BR');
-          return (
-            <div className="flex flex-col">
-              <span className="font-semibold text-primary">#{serviceNumber || '---'}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{dateStr}</span>
-            </div>
-          );
+          return <span className="text-sm">{dateObj.toLocaleDateString('pt-BR')}</span>;
         } catch (error) {
-          return <span className="text-gray-400">Data inválida</span>;
+          return <span className="text-gray-400">-</span>;
         }
       }
     },
     {
+      key: 'cte',
+      header: 'CT-e',
+      render: (cte: string) => (
+        <span className="text-sm">{cte || '-'}</span>
+      )
+    },
+    {
       key: 'clientName',
-      header: 'Cliente',
+      header: 'Empresa',
       render: (name: string) => (
-        <div className="max-w-[200px] truncate" title={name}>{name}</div>
+        <div className="max-w-[150px] truncate" title={name}>{name}</div>
+      )
+    },
+    {
+      key: 'requester',
+      header: 'Solicitante',
+      render: (requester: string) => (
+        <span className="text-sm">{requester || '-'}</span>
       )
     },
     {
       key: 'origin',
-      header: 'Rota',
+      header: 'Serviço',
       render: (origin: string, trip: Trip) => (
         <div className="max-w-[180px] truncate" title={`${origin} → ${trip.destination}`}>
-          {origin} → {trip.destination}
+          {origin || '-'} → {trip.destination || '-'}
         </div>
       )
     },
-    { key: 'freight_value', header: 'Valor', render: (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) },
     {
-      key: 'attachments',
-      header: 'Anexos',
-      render: (attachments: any[]) => {
-        const pdfCount = (attachments || []).filter(att => att.name?.toLowerCase().endsWith('.pdf')).length;
-        if (pdfCount === 0) return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
-        return (
-          <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-            <Paperclip className="h-4 w-4" />
-            <span className="text-sm font-medium">{pdfCount}</span>
-          </div>
-        );
-      },
+      key: 'destination',
+      header: 'Cidade',
+      render: (destination: string) => (
+        <span className="text-sm">{destination || '-'}</span>
+      )
     },
     {
-      key: 'status',
-      header: 'Status',
-      render: (status: string) => (
-        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${getStatusColor(status)}`}>
-          {getStatusText(status)}
+      key: 'vehicleType',
+      header: 'Tipo Veículo',
+      render: (vehicleType: string) => (
+        <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${vehicleType ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : 'text-gray-400'}`}>
+          {vehicleType || '-'}
         </span>
-      ),
+      )
+    },
+    {
+      key: 'driverName',
+      header: 'Motorista',
+      render: (driverName: string) => (
+        <span className="text-sm">{driverName || '-'}</span>
+      )
+    },
+    {
+      key: 'freightType',
+      header: 'Frete',
+      render: (freightType: string) => (
+        <span className="text-sm">{freightType || '-'}</span>
+      )
+    },
+    {
+      key: 'insuranceInfo',
+      header: 'Seguro',
+      render: (insuranceInfo: string) => (
+        <span className="text-sm">{insuranceInfo ? 'R$ ' + insuranceInfo : 'R$0'}</span>
+      )
+    },
+    {
+      key: 'freight_value',
+      header: 'Valor',
+      render: (value: number) => (
+        <span className="font-semibold text-green-600 dark:text-green-400">
+          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)}
+        </span>
+      )
     },
     {
       key: 'actions',
