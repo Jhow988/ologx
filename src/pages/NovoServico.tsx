@@ -276,12 +276,7 @@ const NovoServico: React.FC = () => {
 
     if (!formData.startDate) errors.push('Data do Serviço');
     if (!formData.clientId) errors.push('Empresa');
-    if (!formData.requester || formData.requester.trim() === '') errors.push('Solicitante');
     if (!formData.description || formData.description.trim() === '') errors.push('Descrição do Serviço');
-    if (!formData.origin || formData.origin.trim() === '') errors.push('Origem (preencha o CEP de origem)');
-    if (!formData.destination || formData.destination.trim() === '') errors.push('Destino (preencha o CEP de destino)');
-    if (!formData.vehicleId) errors.push('Veículo');
-    if (!formData.driverId) errors.push('Motorista');
 
     if (errors.length > 0) {
       console.error('❌ Validação falhou:', errors);
@@ -312,17 +307,31 @@ const NovoServico: React.FC = () => {
       storagePath: att.storagePath
     }));
 
+    // Para campos obrigatórios no banco mas opcionais no form, usar valores padrão
+    const defaultVehicleId = formData.vehicleId || vehicles[0]?.id || '';
+    const defaultDriverId = formData.driverId || drivers[0]?.id || '';
+
+    // Se não houver veículo ou motorista disponível, avisar o usuário
+    if (!defaultVehicleId) {
+      toast.error('É necessário ter pelo menos um veículo ativo cadastrado');
+      return;
+    }
+    if (!defaultDriverId) {
+      toast.error('É necessário ter pelo menos um motorista ativo cadastrado');
+      return;
+    }
+
     const dataToSave = {
       client_id: formData.clientId,
       start_date: formData.startDate,
       cte: formData.cte || null,
       nf: formData.nf || null,
-      requester: formData.requester,
-      origin: formData.origin,
-      destination: formData.destination,
+      requester: formData.requester || null,
+      origin: formData.origin || 'A definir',
+      destination: formData.destination || 'A definir',
       vehicle_type: formData.vehicleType || null,
-      vehicle_id: formData.vehicleId,
-      driver_id: formData.driverId,
+      vehicle_id: defaultVehicleId,
+      driver_id: defaultDriverId,
       freight_value: formData.freight_value || 0,
       freight_type: formData.freightType || null,
       insurance_info: formData.insuranceInfo || null,
@@ -357,7 +366,7 @@ const NovoServico: React.FC = () => {
       <form onSubmit={handleSubmit}>
         {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
         <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
-          ✅ Versão: 2025-11-25 v6.0 | Campos Obrigatórios: Data, Empresa, Solicitante, Descrição, CEPs (Origem e Destino), Veículo e Motorista
+          ✅ Versão: 2025-11-25 v7.0 | Campos Obrigatórios: Data, Empresa e Descrição | Veículo/Motorista: Usa primeiro disponível se não selecionado
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
@@ -424,7 +433,7 @@ const NovoServico: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Solicitante *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Solicitante</label>
                 <input
                   type="text"
                   name="requester"
@@ -436,7 +445,7 @@ const NovoServico: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Origem *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Origem</label>
                   <MaskedInput
                     mask="cep"
                     value={formData.originCep}
@@ -445,7 +454,7 @@ const NovoServico: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Origem *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Origem</label>
                   <input
                     type="text"
                     name="origin"
@@ -458,7 +467,7 @@ const NovoServico: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Destino *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Destino</label>
                   <MaskedInput
                     mask="cep"
                     value={formData.destinationCep}
@@ -467,7 +476,7 @@ const NovoServico: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Destino *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Destino</label>
                   <input
                     type="text"
                     name="destination"
@@ -512,7 +521,7 @@ const NovoServico: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo</label>
                 <select
                   name="vehicleId"
                   value={formData.vehicleId}
@@ -520,15 +529,17 @@ const NovoServico: React.FC = () => {
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   disabled={vehicles.length === 0}
                 >
-                  <option value="">{vehicles.length === 0 ? 'Nenhum veículo ativo disponível' : 'Selecione um veículo'}</option>
+                  <option value="">{vehicles.length === 0 ? 'Nenhum veículo ativo disponível' : 'Selecione um veículo (ou deixe em branco)'}</option>
                   {vehicles.map(vehicle => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate} - {vehicle.model}</option>)}
                 </select>
-                {vehicles.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">⚠️ Não há veículos ativos. Ative um veículo em Cadastros → Frota</p>
+                {vehicles.length === 0 ? (
+                  <p className="text-xs text-red-500 mt-1">⚠️ Não há veículos ativos. Cadastre um veículo em Cadastros → Frota</p>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Se não selecionado, será usado o primeiro veículo disponível</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista</label>
                 <select
                   name="driverId"
                   value={formData.driverId}
@@ -536,16 +547,17 @@ const NovoServico: React.FC = () => {
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   disabled={availableDrivers.length === 0}
                 >
-                  <option value="">{availableDrivers.length === 0 ? 'Nenhum motorista habilitado disponível' : 'Selecione um motorista'}</option>
+                  <option value="">{availableDrivers.length === 0 ? 'Nenhum motorista habilitado disponível' : 'Selecione um motorista (ou deixe em branco)'}</option>
                   {availableDrivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
                 </select>
-                {availableDrivers.length === 0 && drivers.length > 0 && formData.vehicleId && (
+                {availableDrivers.length === 0 && drivers.length > 0 && formData.vehicleId ? (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     ⚠️ Este veículo requer CNH categoria {vehicles.find(v => v.id === formData.vehicleId)?.required_cnh_category}. Nenhum motorista possui esta habilitação.
                   </p>
-                )}
-                {drivers.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">⚠️ Não há motoristas ativos. Ative um motorista em Cadastros → Usuários</p>
+                ) : drivers.length === 0 ? (
+                  <p className="text-xs text-red-500 mt-1">⚠️ Não há motoristas ativos. Cadastre um motorista em Cadastros → Usuários</p>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Se não selecionado, será usado o primeiro motorista disponível</p>
                 )}
               </div>
             </div>
