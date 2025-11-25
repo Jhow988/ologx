@@ -153,8 +153,26 @@ const Fechamento: React.FC = () => {
     fetchData();
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     try {
+      // Buscar dados da empresa do usuário (transportadora)
+      const { data: userCompanyData } = await supabase
+        .from('companies')
+        .select('name, document, address, phone, email')
+        .eq('id', user?.companyId)
+        .single();
+
+      // Buscar dados da empresa cliente (se filtro específico)
+      let clientCompanyData = null;
+      if (filters.client !== 'all') {
+        const { data } = await supabase
+          .from('clients')
+          .select('name, document, address, phone, email, city, state')
+          .eq('id', filters.client)
+          .single();
+        clientCompanyData = data;
+      }
+
       // Create new PDF document in landscape mode
       const doc = new jsPDF({
         orientation: 'landscape',
@@ -165,24 +183,58 @@ const Fechamento: React.FC = () => {
       // Format dates for display
       const startDateFormatted = new Date(filters.startDate).toLocaleDateString('pt-BR');
       const endDateFormatted = new Date(filters.endDate).toLocaleDateString('pt-BR');
+      const todayFormatted = new Date().toLocaleDateString('pt-BR');
 
-      // Add header
-      doc.setFontSize(18);
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // HEADER - Título centralizado
+      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+      doc.text('Fechamento de Serviços', pageWidth / 2, 15, { align: 'center' });
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Fechamento de Serviços', doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+      // SEÇÃO DE INFORMAÇÕES - Duas colunas
+      let yPos = 25;
 
+      // COLUNA ESQUERDA - Dados da empresa do relatório (cliente)
       doc.setFontSize(10);
-      doc.text(`Período: ${startDateFormatted} a ${endDateFormatted}`, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      if (clientCompanyData) {
+        doc.text(`Empresa: ${clientCompanyData.name}`, 14, yPos);
+      } else {
+        doc.text('Empresa: Todas', 14, yPos);
+      }
 
-      // Add info section
+      yPos += 5;
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text(`Total de Serviços: ${services.length}`, 14, 36);
-      doc.text(`Valor Total: ${formatCurrency(totalValue)}`, doc.internal.pageSize.getWidth() / 2, 36, { align: 'center' });
-      doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, doc.internal.pageSize.getWidth() - 14, 36, { align: 'right' });
+      doc.text(`Período: ${startDateFormatted} a ${endDateFormatted}`, 14, yPos);
+      yPos += 4;
+      doc.text(`Gerado em: ${todayFormatted}`, 14, yPos);
+
+      // COLUNA DIREITA - Dados da transportadora (usuário)
+      yPos = 25;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      const rightX = pageWidth - 14;
+
+      // Nome fantasia ou razão social da transportadora
+      const transportadoraNome = userCompanyData?.name || 'WA Transportes';
+      doc.text(transportadoraNome, rightX, yPos, { align: 'right' });
+
+      yPos += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      if (userCompanyData?.document) {
+        doc.text(`CNPJ: ${userCompanyData.document}`, rightX, yPos, { align: 'right' });
+        yPos += 4;
+      }
+      if (userCompanyData?.phone) {
+        doc.text(`Tel: ${userCompanyData.phone}`, rightX, yPos, { align: 'right' });
+        yPos += 4;
+      }
+      if (userCompanyData?.email) {
+        doc.text(`Email: ${userCompanyData.email}`, rightX, yPos, { align: 'right' });
+      }
 
       // Prepare table data
       const tableData = services.map(service => [
@@ -202,7 +254,7 @@ const Fechamento: React.FC = () => {
 
       // Add table
       autoTable(doc, {
-        startY: 42,
+        startY: 45,
         head: [['Data', 'CT-e', 'NF', 'Cliente', 'Solicitante', 'Serviço', 'Cidade', 'Veículo', 'Motorista', 'Frete', 'Seguro', 'Valor']],
         body: tableData,
         foot: [['', '', '', '', '', '', '', '', '', '', 'TOTAL', formatCurrency(totalValue)]],
@@ -242,19 +294,29 @@ const Fechamento: React.FC = () => {
         margin: { left: 14, right: 14 }
       });
 
+      // Add summary after table
+      const finalY = (doc as any).lastAutoTable.finalY || 45;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Total: ${formatCurrency(totalValue)}`, 14, finalY + 8);
+      doc.text(`Quantidade de serviços: ${services.length}`, 14, finalY + 14);
+
       // Add footer
-      const finalY = (doc as any).lastAutoTable.finalY || 42;
       doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(128, 128, 128);
       doc.text(
         `Documento gerado automaticamente pelo sistema OLogX em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`,
-        doc.internal.pageSize.getWidth() / 2,
-        finalY + 10,
+        pageWidth / 2,
+        finalY + 22,
         { align: 'center' }
       );
 
       // Save PDF
-      const fileName = `Fechamento_${startDateFormatted.replace(/\//g, '-')}_a_${endDateFormatted.replace(/\//g, '-')}.pdf`;
+      const clientName = clientCompanyData?.name.replace(/[^a-zA-Z0-9]/g, '_') || 'Todas';
+      const fileName = `fechamento_${clientName}_${filters.startDate}_${filters.endDate}.pdf`;
       doc.save(fileName);
 
       toast.success('PDF exportado com sucesso!');
