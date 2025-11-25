@@ -529,7 +529,7 @@ const Financeiro: React.FC = () => {
           {/* Filtros */}
           <div className="space-y-4 mb-6">
             {/* Linha 1: Busca, Período e Categoria */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr,1.5fr,1.5fr] gap-3">
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Buscar por descrição
@@ -537,7 +537,7 @@ const Financeiro: React.FC = () => {
                 <Search className="absolute left-3 top-[38px] h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por descrição..."
+                  placeholder="Buscar..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
@@ -569,7 +569,7 @@ const Financeiro: React.FC = () => {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
                 >
-                  <option value="">Todas as categorias</option>
+                  <option value="">Todas</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
