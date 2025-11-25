@@ -443,7 +443,15 @@ const Financeiro: React.FC = () => {
   };
 
   const columns = [
-    { key: 'description', header: 'Descrição' },
+    {
+      key: 'description',
+      header: 'Descrição',
+      render: (description: string) => (
+        <div className="max-w-[300px] truncate" title={description}>
+          {description}
+        </div>
+      )
+    },
     { key: 'due_date', header: 'Vencimento', render: (date: string) => new Date(date + 'T12:00:00').toLocaleDateString('pt-BR') },
     { key: 'amount', header: 'Valor', render: (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) },
     { key: 'categoryName', header: 'Categoria' },
