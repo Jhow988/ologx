@@ -274,14 +274,12 @@ const EditarServico: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação detalhada com lista de erros
+    // Validação - apenas campos obrigatórios
     const errors: string[] = [];
-    if (!formData.startDate) errors.push('Data');
+    if (!formData.startDate) errors.push('Data do Serviço');
     if (!formData.clientId) errors.push('Empresa');
-    if (!formData.freight_value || formData.freight_value <= 0) errors.push('Valor');
-    if (!formData.vehicleId) errors.push('Veículo');
-    if (!formData.driverId) errors.push('Motorista');
-    // Origem e Destino não são mais obrigatórios (CEP opcional)
+    if (!formData.requester || formData.requester.trim() === '') errors.push('Solicitante');
+    if (!formData.description || formData.description.trim() === '') errors.push('Descrição do Serviço');
 
     if (errors.length > 0) {
       toast.error(`Por favor, preencha os campos obrigatórios: ${errors.join(', ')}`);
@@ -346,8 +344,8 @@ const EditarServico: React.FC = () => {
       </div>
 
       {/* Version Banner */}
-      <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
-        ✅ Versão: 2025-11-15 v6.0 | Status Editável Manualmente
+      <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
+        ✅ Versão: 2025-11-18 v7.0 | Campos Obrigatórios: Data, Empresa, Solicitante e Descrição
       </div>
 
       {/* Form */}
@@ -534,12 +532,11 @@ const EditarServico: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo</label>
                 <select
                   name="vehicleId"
                   value={formData.vehicleId}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   disabled={vehicles.length === 0}
                 >
@@ -551,12 +548,11 @@ const EditarServico: React.FC = () => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista</label>
                 <select
                   name="driverId"
                   value={formData.driverId}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                   disabled={drivers.length === 0}
                 >
@@ -577,14 +573,13 @@ const EditarServico: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Valor do Frete *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Valor do Frete</label>
                 <input
                   type="text"
                   name="freight_value"
                   placeholder="R$ 0,00"
                   value={formData.freight_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(formData.freight_value) : ''}
                   onChange={handleValueChange}
-                  required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                 />
               </div>
