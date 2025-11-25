@@ -271,13 +271,17 @@ const NovoServico: React.FC = () => {
 
     console.log('🎯 SUBMIT NovoServico - formData:', formData);
 
-    // Validação - apenas campos obrigatórios
+    // Validação - campos obrigatórios
     const errors: string[] = [];
 
     if (!formData.startDate) errors.push('Data do Serviço');
     if (!formData.clientId) errors.push('Empresa');
     if (!formData.requester || formData.requester.trim() === '') errors.push('Solicitante');
     if (!formData.description || formData.description.trim() === '') errors.push('Descrição do Serviço');
+    if (!formData.origin || formData.origin.trim() === '') errors.push('Origem (preencha o CEP de origem)');
+    if (!formData.destination || formData.destination.trim() === '') errors.push('Destino (preencha o CEP de destino)');
+    if (!formData.vehicleId) errors.push('Veículo');
+    if (!formData.driverId) errors.push('Motorista');
 
     if (errors.length > 0) {
       console.error('❌ Validação falhou:', errors);
@@ -313,16 +317,16 @@ const NovoServico: React.FC = () => {
       start_date: formData.startDate,
       cte: formData.cte || null,
       nf: formData.nf || null,
-      requester: formData.requester || null,
-      origin: formData.origin || null,
-      destination: formData.destination || null,
+      requester: formData.requester,
+      origin: formData.origin,
+      destination: formData.destination,
       vehicle_type: formData.vehicleType || null,
-      vehicle_id: formData.vehicleId || null,
-      driver_id: formData.driverId || null,
+      vehicle_id: formData.vehicleId,
+      driver_id: formData.driverId,
       freight_value: formData.freight_value || 0,
       freight_type: formData.freightType || null,
       insurance_info: formData.insuranceInfo || null,
-      description: formData.description || null,
+      description: formData.description,
       status: 'scheduled',
       distance: formData.distance || 0,
       attachments: attachmentsToSave,
@@ -353,7 +357,7 @@ const NovoServico: React.FC = () => {
       <form onSubmit={handleSubmit}>
         {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
         <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
-          ✅ Versão: 2025-11-18 v5.0 | Campos Obrigatórios: Data, Empresa, Solicitante e Descrição
+          ✅ Versão: 2025-11-25 v6.0 | Campos Obrigatórios: Data, Empresa, Solicitante, Descrição, CEPs (Origem e Destino), Veículo e Motorista
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
@@ -432,7 +436,7 @@ const NovoServico: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Origem</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Origem *</label>
                   <MaskedInput
                     mask="cep"
                     value={formData.originCep}
@@ -441,7 +445,7 @@ const NovoServico: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Origem</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Origem *</label>
                   <input
                     type="text"
                     name="origin"
@@ -454,7 +458,7 @@ const NovoServico: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Destino</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">CEP Destino *</label>
                   <MaskedInput
                     mask="cep"
                     value={formData.destinationCep}
@@ -463,7 +467,7 @@ const NovoServico: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Destino</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Cidade Destino *</label>
                   <input
                     type="text"
                     name="destination"
@@ -508,7 +512,7 @@ const NovoServico: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Veículo *</label>
                 <select
                   name="vehicleId"
                   value={formData.vehicleId}
@@ -524,7 +528,7 @@ const NovoServico: React.FC = () => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Motorista *</label>
                 <select
                   name="driverId"
                   value={formData.driverId}
