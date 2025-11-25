@@ -394,6 +394,7 @@ const Viagens: React.FC = () => {
     {
       key: 'actions',
       header: 'Ações',
+      sortable: false,
       render: (_: any, trip: Trip) => (
         <div className="flex items-center gap-2">
           <Button
