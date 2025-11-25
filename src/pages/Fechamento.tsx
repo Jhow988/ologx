@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Download, Search } from 'lucide-react';
+import { Calendar, Download, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Card from '../components/UI/Card';
@@ -70,6 +70,7 @@ const Fechamento: React.FC = () => {
   const [totalValue, setTotalValue] = useState(0);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [companyName, setCompanyName] = useState<string>('Empresa');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof ServiceRecord; direction: 'asc' | 'desc' } | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user?.companyId) return;
@@ -154,12 +155,48 @@ const Fechamento: React.FC = () => {
     fetchData();
   };
 
+  // Função para ordenar os serviços
+  const handleSort = (key: keyof ServiceRecord) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Serviços ordenados
+  const sortedServices = React.useMemo(() => {
+    if (!sortConfig) return services;
+
+    const sorted = [...services].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      // Tratamento especial para valores numéricos
+      if (sortConfig.key === 'value') {
+        return sortConfig.direction === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      }
+
+      // Tratamento para strings
+      const aString = String(aValue).toLowerCase();
+      const bString = String(bValue).toLowerCase();
+
+      if (aString < bString) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aString > bString) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [services, sortConfig]);
+
   const handleExportPDF = async () => {
     try {
       // Buscar dados da empresa do usuário (transportadora)
       const { data: userCompanyData, error: companyError } = await supabase
         .from('companies')
-        .select('name, cnpj, address, phone, email, city, state, zip_code')
+        .select('name, document, address, phone, email')
         .eq('id', user?.companyId)
         .single();
 
@@ -233,9 +270,9 @@ const Fechamento: React.FC = () => {
       doc.setFontSize(8);
 
       // CNPJ
-      if (userCompanyData?.cnpj) {
-        console.log('📝 CNPJ:', userCompanyData.cnpj);
-        doc.text(`CNPJ: ${userCompanyData.cnpj}`, rightX, yPos, { align: 'right' });
+      if (userCompanyData?.document) {
+        console.log('📝 CNPJ:', userCompanyData.document);
+        doc.text(`CNPJ: ${userCompanyData.document}`, rightX, yPos, { align: 'right' });
         yPos += 4;
       } else {
         console.log('⚠️ CNPJ não encontrado');
@@ -450,29 +487,113 @@ const Fechamento: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b-2 border-gray-200 dark:border-dark-border">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Data</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">CT-e</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">NF</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Cliente</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Solicitante</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Serviço</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Cidade</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Veículo</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Motorista</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Frete</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Seguro</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">Valor</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('date')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Data
+                    {sortConfig?.key === 'date' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('cte')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    CT-e
+                    {sortConfig?.key === 'cte' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('nf')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    NF
+                    {sortConfig?.key === 'nf' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('client')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Cliente
+                    {sortConfig?.key === 'client' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('requester')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Solicitante
+                    {sortConfig?.key === 'requester' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('service')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Serviço
+                    {sortConfig?.key === 'service' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('city')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Cidade
+                    {sortConfig?.key === 'city' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('vehicle')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Veículo
+                    {sortConfig?.key === 'vehicle' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('driver')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Motorista
+                    {sortConfig?.key === 'driver' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('freightType')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Frete
+                    {sortConfig?.key === 'freightType' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('insurance')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                    Seguro
+                    {sortConfig?.key === 'insurance' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
+                  <button onClick={() => handleSort('value')} className="flex items-center gap-1 ml-auto hover:text-primary transition-colors">
+                    Valor
+                    {sortConfig?.key === 'value' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {services.length === 0 ? (
+              {sortedServices.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="text-center py-8 text-gray-500 dark:text-dark-text-secondary">
                     Nenhum serviço encontrado para o período selecionado
                   </td>
                 </tr>
               ) : (
-                services.map((service, index) => (
+                sortedServices.map((service, index) => (
                   <tr
                     key={index}
                     className="border-b border-gray-100 dark:border-dark-border/50 hover:bg-gray-50 dark:hover:bg-dark-bg-secondary"
@@ -495,7 +616,7 @@ const Fechamento: React.FC = () => {
                 ))
               )}
             </tbody>
-            {services.length > 0 && (
+            {sortedServices.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-bg-secondary">
                   <td colSpan={11} className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-dark-text text-right">
