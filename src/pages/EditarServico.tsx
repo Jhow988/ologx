@@ -29,7 +29,6 @@ const EditarServico: React.FC = () => {
   const [formData, setFormData] = useState({
     clientId: '',
     startDate: '',
-    endDate: '',
     status: 'scheduled' as 'scheduled' | 'in_progress' | 'completed' | 'cancelled',
     cte: '',
     nf: '',
@@ -89,12 +88,10 @@ const EditarServico: React.FC = () => {
       if (trip) {
         console.log('📅 Carregando dados da viagem:', trip);
         console.log('  - start_date original:', trip.start_date);
-        console.log('  - end_date original:', trip.end_date);
 
         setFormData({
           clientId: trip.client_id || '',
           startDate: trip.start_date ? trip.start_date.split('T')[0] : '',
-          endDate: trip.end_date ? trip.end_date.split('T')[0] : '',
           status: trip.status || 'scheduled',
           cte: trip.cte || '',
           nf: trip.nf || '',
@@ -296,7 +293,6 @@ const EditarServico: React.FC = () => {
     const dataToSave = {
       client_id: formData.clientId,
       start_date: formData.startDate,
-      end_date: formData.endDate || null,
       status: formData.status,
       cte: formData.cte || null,
       nf: formData.nf || null,
@@ -344,7 +340,7 @@ const EditarServico: React.FC = () => {
 
       {/* Version Banner */}
       <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
-        ✅ Versão: 2025-11-18 v7.0 | Campos Obrigatórios: Data, Empresa, Solicitante e Descrição
+        ✅ Versão: 2025-11-25 v8.0 | Campos Obrigatórios: Data, Empresa e Descrição | Campo "Data de Término" removido
       </div>
 
       {/* Form */}
@@ -357,7 +353,7 @@ const EditarServico: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Data de Início *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Data do Serviço *</label>
                 <input
                   type="date"
                   name="startDate"
@@ -366,20 +362,6 @@ const EditarServico: React.FC = () => {
                   required
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Data de Término</label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  min={formData.startDate}
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-dark-text"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Preencha quando o serviço for concluído
-                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Status</label>
