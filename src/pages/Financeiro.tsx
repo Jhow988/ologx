@@ -528,23 +528,22 @@ const Financeiro: React.FC = () => {
 
           {/* Filtros */}
           <div className="space-y-4 mb-6">
-            {/* Linha 1: Busca */}
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Buscar por descrição
-              </label>
-              <Search className="absolute left-3 top-[38px] h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por descrição..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-              />
-            </div>
+            {/* Linha 1: Busca, Período e Categoria */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Buscar por descrição
+                </label>
+                <Search className="absolute left-3 top-[38px] h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por descrição..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                />
+              </div>
 
-            {/* Linha 2: Filtros de data e categoria */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Período
@@ -578,7 +577,7 @@ const Financeiro: React.FC = () => {
               </div>
             </div>
 
-            {/* Linha 3: Datas personalizadas (quando necessário) */}
+            {/* Linha 2: Datas personalizadas (quando necessário) */}
             {periodFilter === 'custom' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -608,7 +607,7 @@ const Financeiro: React.FC = () => {
               </div>
             )}
 
-            {/* Linha 4: Botão Limpar e Contador */}
+            {/* Linha 3: Botão Limpar e Contador */}
             {(searchTerm || periodFilter !== 'current' || customStartDate || customEndDate || selectedCategory) && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-dark-border">
                 <button
