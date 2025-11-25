@@ -533,7 +533,7 @@ const Financeiro: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Buscar por descrição
               </label>
-              <Search className="absolute left-3 bottom-2.5 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-[38px] h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Buscar por descrição..."
@@ -544,7 +544,7 @@ const Financeiro: React.FC = () => {
             </div>
 
             {/* Linha 2: Filtros de data e categoria */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Período
@@ -560,35 +560,6 @@ const Financeiro: React.FC = () => {
                   <option value="custom">Personalizado</option>
                 </select>
               </div>
-
-              {periodFilter === 'custom' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Data Inicial
-                    </label>
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Data Final
-                    </label>
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                      min={customStartDate}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
-                    />
-                  </div>
-                </>
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -607,7 +578,37 @@ const Financeiro: React.FC = () => {
               </div>
             </div>
 
-            {/* Linha 3: Botão Limpar e Contador */}
+            {/* Linha 3: Datas personalizadas (quando necessário) */}
+            {periodFilter === 'custom' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Data Inicial
+                  </label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Data Final
+                  </label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    min={customStartDate}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Linha 4: Botão Limpar e Contador */}
             {(searchTerm || periodFilter !== 'current' || customStartDate || customEndDate || selectedCategory) && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-dark-border">
                 <button
