@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Plus, Search, Loader, TrendingUp, TrendingDown, CheckCircle, Edit } from 'lucide-react';
+import { Plus, Search, Loader, TrendingUp, TrendingDown, CheckCircle, Edit, Trash2 } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Table from '../components/UI/Table';
@@ -331,6 +331,21 @@ const Financeiro: React.FC = () => {
     else await fetchData();
   }
 
+  const handleDelete = async (record: FinancialRecord) => {
+    if (!window.confirm('Tem certeza que deseja excluir este registro?')) {
+      return;
+    }
+
+    const { error } = await supabase.from('financial_records').delete().eq('id', record.id);
+    if (error) {
+      console.error("Error deleting record:", error);
+      toast.error('Erro ao excluir registro');
+    } else {
+      toast.success('Registro excluído com sucesso');
+      await fetchData();
+    }
+  }
+
   const closeModal = () => setModalState({ type: null, record: null });
 
   // Helper function to calculate date range based on period filter
@@ -476,6 +491,7 @@ const Financeiro: React.FC = () => {
     {
       key: 'actions',
       header: 'Ações',
+      sortable: false,
       render: (_: any, record: FinancialRecord) => (
         <div className="flex gap-2">
           <Button
@@ -504,6 +520,13 @@ const Financeiro: React.FC = () => {
               Reverter
             </button>
           )}
+          <Button
+            variant="outline"
+            icon={Trash2}
+            onClick={() => handleDelete(record)}
+            title="Excluir"
+            className="text-red-600 hover:text-red-700 hover:border-red-600 dark:text-red-400 dark:hover:text-red-300"
+          />
         </div>
       ),
     },
