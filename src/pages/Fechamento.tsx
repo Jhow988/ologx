@@ -213,27 +213,39 @@ const Fechamento: React.FC = () => {
 
       // COLUNA DIREITA - Dados da transportadora (usuário)
       yPos = 25;
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       const rightX = pageWidth - 14;
 
       // Nome fantasia ou razão social da transportadora
-      const transportadoraNome = userCompanyData?.name || 'WA Transportes';
+      const transportadoraNome = userCompanyData?.name || 'Transportadora';
       doc.text(transportadoraNome, rightX, yPos, { align: 'right' });
 
       yPos += 5;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
+      doc.setFontSize(8);
+
+      // CNPJ
       if (userCompanyData?.document) {
         doc.text(`CNPJ: ${userCompanyData.document}`, rightX, yPos, { align: 'right' });
         yPos += 4;
       }
+
+      // Endereço
+      if (userCompanyData?.address) {
+        doc.text(userCompanyData.address, rightX, yPos, { align: 'right' });
+        yPos += 4;
+      }
+
+      // Telefone
       if (userCompanyData?.phone) {
         doc.text(`Tel: ${userCompanyData.phone}`, rightX, yPos, { align: 'right' });
         yPos += 4;
       }
+
+      // Email
       if (userCompanyData?.email) {
-        doc.text(`Email: ${userCompanyData.email}`, rightX, yPos, { align: 'right' });
+        doc.text(userCompanyData.email, rightX, yPos, { align: 'right' });
       }
 
       // Prepare table data
