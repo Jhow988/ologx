@@ -358,17 +358,10 @@ const Viagens: React.FC = () => {
       )
     },
     {
-      key: 'requester',
-      header: 'Solicitante',
-      render: (requester: string) => (
-        <span className="text-sm">{requester || '-'}</span>
-      )
-    },
-    {
       key: 'description',
       header: 'Serviço',
       render: (description: string) => (
-        <div className="max-w-[250px] truncate" title={description || '-'}>
+        <div className="max-w-[300px] truncate" title={description || '-'}>
           {description || '-'}
         </div>
       )
@@ -379,15 +372,6 @@ const Viagens: React.FC = () => {
       render: (status: string) => (
         <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getStatusColor(status)}`}>
           {getStatusText(status)}
-        </span>
-      )
-    },
-    {
-      key: 'vehicleType',
-      header: 'Tipo Veículo',
-      render: (vehicleType: string) => (
-        <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${vehicleType ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : 'text-gray-400'}`}>
-          {vehicleType || '-'}
         </span>
       )
     },
@@ -584,11 +568,17 @@ const Viagens: React.FC = () => {
               </div>
             </div>
 
-            {/* Quarta linha: Veículo, Motorista */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Quarta linha: Veículo, Tipo de Veículo, Motorista */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Veículo</label>
                 <p className="text-sm font-semibold text-gray-900 dark:text-dark-text">{modalState.trip.vehiclePlate || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de Veículo</label>
+                <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${modalState.trip.vehicleType ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : 'text-gray-400'}`}>
+                  {modalState.trip.vehicleType || '-'}
+                </span>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Motorista</label>
@@ -598,7 +588,17 @@ const Viagens: React.FC = () => {
               </div>
             </div>
 
-            {/* Quinta linha: Valor do Frete */}
+            {/* Quinta linha: Descrição do Serviço */}
+            {modalState.trip.description && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Descrição do Serviço</label>
+                <p className="text-sm text-gray-900 dark:text-dark-text bg-gray-50 dark:bg-dark-border p-3 rounded-lg">
+                  {modalState.trip.description}
+                </p>
+              </div>
+            )}
+
+            {/* Sexta linha: Valor do Frete */}
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Valor do Frete</label>
               <p className="text-lg font-bold text-green-600 dark:text-green-400">
