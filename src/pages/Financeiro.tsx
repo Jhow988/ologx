@@ -5,6 +5,7 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 import NewFinancialRecordForm from '../components/Forms/NewFinancialRecordForm';
 import { FinancialRecord, Trip, FinancialCategory, FinancialSubcategory } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +33,20 @@ const Financeiro: React.FC = () => {
     type: 'new' | 'edit' | null;
     record: FinancialRecord | null;
   }>({ type: null, record: null });
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'confirm' | 'delete-choice' | 'edit-choice';
+    title: string;
+    message: string;
+    onConfirm: (choice?: string) => void;
+  }>({
+    isOpen: false,
+    type: 'confirm',
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Função para criar automaticamente os próximos meses de contas recorrentes
   const createNextMonthRecurringEntries = useCallback(async () => {
@@ -223,53 +238,60 @@ const Financeiro: React.FC = () => {
         } else {
           console.log("✅ Registro atualizado com sucesso:", updatedData);
           toast.success('Registro atualizado com sucesso');
+          await fetchData();
+          closeModal();
         }
       } else {
-        // Para parcelado ou recorrente, perguntar escopo da atualização
+        // Para parcelado ou recorrente, mostrar modal de escolha
         const isRecurring = record.recurrence === 'recurring';
-        const message = isRecurring
-          ? 'Esta é uma conta recorrente. Deseja atualizar:\n\n1 - Digite "1" para atualizar TODAS as ocorrências\n2 - Digite "2" para atualizar desta ocorrência em DIANTE\n3 - Digite "3" para atualizar APENAS esta ocorrência\n\n(ou clique em Cancelar)'
-          : 'Esta é uma conta parcelada. Deseja atualizar:\n\n1 - Digite "1" para atualizar TODAS as parcelas\n2 - Digite "2" para atualizar desta parcela em DIANTE\n3 - Digite "3" para atualizar APENAS esta parcela\n\n(ou clique em Cancelar)';
 
-        const choice = window.prompt(message);
+        setConfirmDialog({
+          isOpen: true,
+          type: 'edit-choice',
+          title: isRecurring ? 'Atualizar Conta Recorrente' : 'Atualizar Conta Parcelada',
+          message: isRecurring
+            ? 'Esta é uma conta recorrente. Escolha como deseja atualizar:'
+            : 'Esta é uma conta parcelada. Escolha como deseja atualizar:',
+          onConfirm: async (choice?: string) => {
+            toast.loading('Atualizando registros...');
+            let updateQuery = supabase.from('financial_records').update(cleanedData);
 
-        if (!choice || !['1', '2', '3'].includes(choice)) {
-          toast('Atualização cancelada', { icon: 'ℹ️' });
-          return;
-        }
+            if (choice === 'all') {
+              // Atualizar todas com o mesmo recurrence_id
+              updateQuery = updateQuery.eq('recurrence_id', record.recurrence_id!);
+            } else if (choice === 'future') {
+              // Atualizar desta em diante (mesma recurrence_id e due_date >= atual)
+              updateQuery = updateQuery
+                .eq('recurrence_id', record.recurrence_id!)
+                .gte('due_date', record.due_date);
+            } else {
+              // Atualizar apenas esta
+              updateQuery = updateQuery.eq('id', record.id);
+            }
 
-        toast.loading('Atualizando registros...');
-        let updateQuery = supabase.from('financial_records').update(cleanedData);
+            const { error } = await updateQuery;
 
-        if (choice === '1') {
-          // Atualizar todas com o mesmo recurrence_id
-          updateQuery = updateQuery.eq('recurrence_id', record.recurrence_id);
-        } else if (choice === '2') {
-          // Atualizar desta em diante (mesma recurrence_id e due_date >= atual)
-          updateQuery = updateQuery
-            .eq('recurrence_id', record.recurrence_id)
-            .gte('due_date', record.due_date);
-        } else {
-          // Atualizar apenas esta
-          updateQuery = updateQuery.eq('id', record.id);
-        }
+            toast.dismiss();
 
-        const { error } = await updateQuery;
+            if (error) {
+              console.error("❌ Error updating record:", error);
+              toast.error('Erro ao atualizar registro');
+            } else {
+              const messages = {
+                'all': 'Todas as ocorrências foram atualizadas',
+                'future': 'Ocorrências futuras foram atualizadas',
+                'single': 'Registro atualizado com sucesso'
+              };
+              console.log("✅ Registros atualizados com sucesso");
+              toast.success(messages[choice as 'all' | 'future' | 'single']);
+              await fetchData();
+              closeModal();
+            }
+          },
+        });
 
-        toast.dismiss();
-
-        if (error) {
-          console.error("❌ Error updating record:", error);
-          toast.error('Erro ao atualizar registro');
-        } else {
-          const messages = {
-            '1': 'Todas as ocorrências foram atualizadas',
-            '2': 'Ocorrências futuras foram atualizadas',
-            '3': 'Registro atualizado com sucesso'
-          };
-          console.log("✅ Registros atualizados com sucesso");
-          toast.success(messages[choice as '1' | '2' | '3']);
-        }
+        // Retornar sem fechar o modal ainda, pois o usuário precisa escolher
+        return;
       }
     } else {
         console.log('✨ Modo CRIAÇÃO - Criando novo registro');
@@ -382,56 +404,62 @@ const Financeiro: React.FC = () => {
     else await fetchData();
   }
 
-  const handleDelete = async (record: FinancialRecord) => {
-    // Se for única, excluir normalmente
+  const handleDelete = (record: FinancialRecord) => {
+    // Se for única, mostrar confirmação simples
     if (record.recurrence === 'unique' || !record.recurrence_id) {
-      if (!window.confirm('Tem certeza que deseja excluir este registro?')) {
-        return;
-      }
-
-      const { error } = await supabase.from('financial_records').delete().eq('id', record.id);
-      if (error) {
-        console.error("Error deleting record:", error);
-        toast.error('Erro ao excluir registro');
-      } else {
-        toast.success('Registro excluído com sucesso');
-        await fetchData();
-      }
+      setConfirmDialog({
+        isOpen: true,
+        type: 'confirm',
+        title: 'Excluir Registro',
+        message: 'Tem certeza que deseja excluir este registro?',
+        onConfirm: async () => {
+          const { error } = await supabase.from('financial_records').delete().eq('id', record.id);
+          if (error) {
+            console.error("Error deleting record:", error);
+            toast.error('Erro ao excluir registro');
+          } else {
+            toast.success('Registro excluído com sucesso');
+            await fetchData();
+          }
+        },
+      });
       return;
     }
 
-    // Para parcelado ou recorrente, perguntar se quer excluir todas
+    // Para parcelado ou recorrente, mostrar opções
     const isRecurring = record.recurrence === 'recurring';
-    const message = isRecurring
-      ? 'Esta é uma conta recorrente. Deseja excluir:\n\n[SIM] - Todas as ocorrências desta recorrência\n[NÃO] - Apenas esta ocorrência\n[CANCELAR] - Cancelar'
-      : 'Esta é uma conta parcelada. Deseja excluir:\n\n[SIM] - Todas as parcelas\n[NÃO] - Apenas esta parcela\n[CANCELAR] - Cancelar';
+    setConfirmDialog({
+      isOpen: true,
+      type: 'delete-choice',
+      title: isRecurring ? 'Excluir Conta Recorrente' : 'Excluir Conta Parcelada',
+      message: isRecurring
+        ? 'Esta é uma conta recorrente. Escolha como deseja excluir:'
+        : 'Esta é uma conta parcelada. Escolha como deseja excluir:',
+      onConfirm: async (choice?: string) => {
+        let deleteQuery = supabase.from('financial_records').delete();
 
-    const result = window.confirm(message);
+        if (choice === 'all') {
+          // Excluir todas com o mesmo recurrence_id
+          deleteQuery = deleteQuery.eq('recurrence_id', record.recurrence_id!);
+          toast.loading('Excluindo todas as ocorrências...');
+        } else {
+          // Excluir apenas esta
+          deleteQuery = deleteQuery.eq('id', record.id);
+        }
 
-    if (result === null) return; // Cancelar
+        const { error } = await deleteQuery;
 
-    let deleteQuery = supabase.from('financial_records').delete();
-
-    if (result) {
-      // Excluir todas com o mesmo recurrence_id
-      deleteQuery = deleteQuery.eq('recurrence_id', record.recurrence_id);
-      toast.loading('Excluindo todas as ocorrências...');
-    } else {
-      // Excluir apenas esta
-      deleteQuery = deleteQuery.eq('id', record.id);
-    }
-
-    const { error } = await deleteQuery;
-
-    if (error) {
-      console.error("Error deleting record:", error);
-      toast.dismiss();
-      toast.error('Erro ao excluir registro');
-    } else {
-      toast.dismiss();
-      toast.success(result ? 'Todas as ocorrências foram excluídas' : 'Registro excluído com sucesso');
-      await fetchData();
-    }
+        if (error) {
+          console.error("Error deleting record:", error);
+          toast.dismiss();
+          toast.error('Erro ao excluir registro');
+        } else {
+          toast.dismiss();
+          toast.success(choice === 'all' ? 'Todas as ocorrências foram excluídas' : 'Registro excluído com sucesso');
+          await fetchData();
+        }
+      },
+    });
   }
 
   const closeModal = () => setModalState({ type: null, record: null });
@@ -773,6 +801,15 @@ const Financeiro: React.FC = () => {
           onCancel={closeModal}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+      />
     </>
   );
 };
