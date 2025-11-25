@@ -103,53 +103,60 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       </AnimatePresence>
 
       <aside
-        className={`fixed left-0 top-0 h-full w-64 bg-primary text-white dark:bg-dark-bg-secondary dark:border-r dark:border-dark-border flex flex-col transition-transform duration-300 ease-in-out z-30 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed left-0 top-0 h-full bg-primary text-white dark:bg-dark-bg-secondary dark:border-r dark:border-dark-border flex flex-col transition-all duration-300 ease-in-out z-30 ${
+          isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="p-6 border-b border-primary-dark dark:border-dark-border">
-          <h1 className="text-xl font-bold flex items-center gap-2 text-white dark:text-dark-text">
-            <Truck className="h-6 w-6" />
-            Ologx
+        <div className={`border-b border-primary-dark dark:border-dark-border ${isOpen ? 'p-4' : 'p-3'}`}>
+          <h1 className={`font-bold flex items-center text-white dark:text-dark-text transition-all ${
+            isOpen ? 'text-lg gap-2' : 'text-xl justify-center'
+          }`}>
+            <Truck className={isOpen ? 'h-5 w-5' : 'h-6 w-6'} />
+            {isOpen && <span>Ologx</span>}
           </h1>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className={`flex-1 overflow-y-auto ${isOpen ? 'p-3 space-y-1' : 'p-2 space-y-2'}`}>
           {menuItems.map((item) => (
             <div key={item.path}>
               {item.submenu ? (
                 <Can perform={item.submenu.map(s => s.permission).join('|')}>
                   <button
-                    onClick={() => handleSubmenuToggle(item.path)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors text-white/80 dark:text-dark-text-secondary hover:bg-primary-dark dark:hover:bg-dark-border hover:text-white dark:hover:text-dark-text focus:outline-none"
+                    onClick={() => isOpen && handleSubmenuToggle(item.path)}
+                    className={`w-full flex items-center rounded-lg transition-colors text-white/80 dark:text-dark-text-secondary hover:bg-primary-dark dark:hover:bg-dark-border hover:text-white dark:hover:text-dark-text focus:outline-none ${
+                      isOpen ? 'justify-between gap-3 px-3 py-2.5 text-sm font-medium' : 'justify-center p-2.5'
+                    }`}
+                    title={!isOpen ? item.label : undefined}
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
+                    <div className={`flex items-center ${isOpen ? 'gap-3' : ''}`}>
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {isOpen && <span>{item.label}</span>}
                     </div>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform duration-200 ${
-                        openSubmenu === item.path ? 'rotate-180' : ''
-                      }`}
-                    />
+                    {isOpen && (
+                      <ChevronDown
+                        className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
+                          openSubmenu === item.path ? 'rotate-180' : ''
+                        }`}
+                      />
+                    )}
                   </button>
                   <AnimatePresence>
-                    {openSubmenu === item.path && (
+                    {isOpen && openSubmenu === item.path && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="overflow-hidden ml-4"
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className="overflow-hidden ml-3"
                       >
-                        <div className="pt-1 pb-2 space-y-1">
+                        <div className="pt-1 pb-1 space-y-0.5">
                           {item.submenu.map((subItem) => (
                             <Can perform={subItem.permission} key={subItem.path}>
                               <NavLink
                                 to={subItem.path}
                                 onClick={onClose}
                                 className={({ isActive }) =>
-                                  `flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                                  `flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
                                     isActive
                                       ? 'bg-accent text-white'
                                       : 'text-white/70 dark:text-dark-text-secondary hover:bg-primary-dark dark:hover:bg-dark-border hover:text-white dark:hover:text-dark-text'
@@ -173,15 +180,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     end={item.path === '/'}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                      `flex items-center rounded-lg transition-colors ${
+                        isOpen ? 'gap-3 px-3 py-2.5 text-sm font-medium' : 'justify-center p-2.5'
+                      } ${
                         isActive
                           ? 'bg-accent text-white'
                           : 'text-white/80 dark:text-dark-text-secondary hover:bg-primary-dark dark:hover:bg-dark-border hover:text-white dark:hover:text-dark-text'
                       }`
                     }
+                    title={!isOpen ? item.label : undefined}
                   >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    {isOpen && <span>{item.label}</span>}
                   </NavLink>
                 </Can>
               )}

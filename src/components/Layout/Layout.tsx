@@ -18,7 +18,7 @@ const Layout: React.FC = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* A área de conteúdo principal ajusta sua margem com base no estado da barra lateral */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-16'}`}>
         {/* O botão de menu do cabeçalho agora irá alternar a barra lateral */}
         <Header onMenuClick={toggleSidebar} />
 
