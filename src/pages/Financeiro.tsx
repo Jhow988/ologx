@@ -207,18 +207,69 @@ const Financeiro: React.FC = () => {
 
     if (modalState.type === 'edit' && modalState.record) {
       console.log('📝 Modo EDIÇÃO - Atualizando registro:', modalState.record.id);
-      const { error, data: updatedData } = await supabase
-        .from('financial_records')
-        .update(cleanedData)
-        .eq('id', modalState.record.id)
-        .select();
+      const record = modalState.record;
 
-      if (error) {
-        console.error("❌ Error updating record:", error);
-        console.error("  - message:", error.message);
-        console.error("  - details:", error.details);
+      // Se for única ou sem recurrence_id, atualizar normalmente
+      if (record.recurrence === 'unique' || !record.recurrence_id) {
+        const { error, data: updatedData } = await supabase
+          .from('financial_records')
+          .update(cleanedData)
+          .eq('id', record.id)
+          .select();
+
+        if (error) {
+          console.error("❌ Error updating record:", error);
+          toast.error('Erro ao atualizar registro');
+        } else {
+          console.log("✅ Registro atualizado com sucesso:", updatedData);
+          toast.success('Registro atualizado com sucesso');
+        }
       } else {
-        console.log("✅ Registro atualizado com sucesso:", updatedData);
+        // Para parcelado ou recorrente, perguntar escopo da atualização
+        const isRecurring = record.recurrence === 'recurring';
+        const message = isRecurring
+          ? 'Esta é uma conta recorrente. Deseja atualizar:\n\n1 - Digite "1" para atualizar TODAS as ocorrências\n2 - Digite "2" para atualizar desta ocorrência em DIANTE\n3 - Digite "3" para atualizar APENAS esta ocorrência\n\n(ou clique em Cancelar)'
+          : 'Esta é uma conta parcelada. Deseja atualizar:\n\n1 - Digite "1" para atualizar TODAS as parcelas\n2 - Digite "2" para atualizar desta parcela em DIANTE\n3 - Digite "3" para atualizar APENAS esta parcela\n\n(ou clique em Cancelar)';
+
+        const choice = window.prompt(message);
+
+        if (!choice || !['1', '2', '3'].includes(choice)) {
+          toast('Atualização cancelada', { icon: 'ℹ️' });
+          return;
+        }
+
+        toast.loading('Atualizando registros...');
+        let updateQuery = supabase.from('financial_records').update(cleanedData);
+
+        if (choice === '1') {
+          // Atualizar todas com o mesmo recurrence_id
+          updateQuery = updateQuery.eq('recurrence_id', record.recurrence_id);
+        } else if (choice === '2') {
+          // Atualizar desta em diante (mesma recurrence_id e due_date >= atual)
+          updateQuery = updateQuery
+            .eq('recurrence_id', record.recurrence_id)
+            .gte('due_date', record.due_date);
+        } else {
+          // Atualizar apenas esta
+          updateQuery = updateQuery.eq('id', record.id);
+        }
+
+        const { error } = await updateQuery;
+
+        toast.dismiss();
+
+        if (error) {
+          console.error("❌ Error updating record:", error);
+          toast.error('Erro ao atualizar registro');
+        } else {
+          const messages = {
+            '1': 'Todas as ocorrências foram atualizadas',
+            '2': 'Ocorrências futuras foram atualizadas',
+            '3': 'Registro atualizado com sucesso'
+          };
+          console.log("✅ Registros atualizados com sucesso");
+          toast.success(messages[choice as '1' | '2' | '3']);
+        }
       }
     } else {
         console.log('✨ Modo CRIAÇÃO - Criando novo registro');
@@ -332,16 +383,53 @@ const Financeiro: React.FC = () => {
   }
 
   const handleDelete = async (record: FinancialRecord) => {
-    if (!window.confirm('Tem certeza que deseja excluir este registro?')) {
+    // Se for única, excluir normalmente
+    if (record.recurrence === 'unique' || !record.recurrence_id) {
+      if (!window.confirm('Tem certeza que deseja excluir este registro?')) {
+        return;
+      }
+
+      const { error } = await supabase.from('financial_records').delete().eq('id', record.id);
+      if (error) {
+        console.error("Error deleting record:", error);
+        toast.error('Erro ao excluir registro');
+      } else {
+        toast.success('Registro excluído com sucesso');
+        await fetchData();
+      }
       return;
     }
 
-    const { error } = await supabase.from('financial_records').delete().eq('id', record.id);
+    // Para parcelado ou recorrente, perguntar se quer excluir todas
+    const isRecurring = record.recurrence === 'recurring';
+    const message = isRecurring
+      ? 'Esta é uma conta recorrente. Deseja excluir:\n\n[SIM] - Todas as ocorrências desta recorrência\n[NÃO] - Apenas esta ocorrência\n[CANCELAR] - Cancelar'
+      : 'Esta é uma conta parcelada. Deseja excluir:\n\n[SIM] - Todas as parcelas\n[NÃO] - Apenas esta parcela\n[CANCELAR] - Cancelar';
+
+    const result = window.confirm(message);
+
+    if (result === null) return; // Cancelar
+
+    let deleteQuery = supabase.from('financial_records').delete();
+
+    if (result) {
+      // Excluir todas com o mesmo recurrence_id
+      deleteQuery = deleteQuery.eq('recurrence_id', record.recurrence_id);
+      toast.loading('Excluindo todas as ocorrências...');
+    } else {
+      // Excluir apenas esta
+      deleteQuery = deleteQuery.eq('id', record.id);
+    }
+
+    const { error } = await deleteQuery;
+
     if (error) {
       console.error("Error deleting record:", error);
+      toast.dismiss();
       toast.error('Erro ao excluir registro');
     } else {
-      toast.success('Registro excluído com sucesso');
+      toast.dismiss();
+      toast.success(result ? 'Todas as ocorrências foram excluídas' : 'Registro excluído com sucesso');
       await fetchData();
     }
   }
