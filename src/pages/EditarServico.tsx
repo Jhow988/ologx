@@ -274,11 +274,10 @@ const EditarServico: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação - apenas campos obrigatórios
+    // Validação - apenas campos obrigatórios (Data, Empresa e Descrição)
     const errors: string[] = [];
     if (!formData.startDate) errors.push('Data do Serviço');
     if (!formData.clientId) errors.push('Empresa');
-    if (!formData.requester || formData.requester.trim() === '') errors.push('Solicitante');
     if (!formData.description || formData.description.trim() === '') errors.push('Descrição do Serviço');
 
     if (errors.length > 0) {
