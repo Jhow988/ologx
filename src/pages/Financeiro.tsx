@@ -556,7 +556,7 @@ const Financeiro: React.FC = () => {
                 >
                   <option value="current">Mês Atual</option>
                   <option value="next">Próximo Mês</option>
-                  <option value="last">Último Mês</option>
+                  <option value="last">Mês Anterior</option>
                   <option value="custom">Personalizado</option>
                 </select>
               </div>
