@@ -536,14 +536,6 @@ const Fechamento: React.FC = () => {
                   </button>
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
-                  <button onClick={() => handleSort('city')} className="flex items-center gap-1 hover:text-primary transition-colors">
-                    Cidade
-                    {sortConfig?.key === 'city' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                  </button>
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
                   <button onClick={() => handleSort('vehicle')} className="flex items-center gap-1 hover:text-primary transition-colors">
                     Veículo
                     {sortConfig?.key === 'vehicle' ? (
@@ -555,22 +547,6 @@ const Fechamento: React.FC = () => {
                   <button onClick={() => handleSort('driver')} className="flex items-center gap-1 hover:text-primary transition-colors">
                     Motorista
                     {sortConfig?.key === 'driver' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                  </button>
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
-                  <button onClick={() => handleSort('freightType')} className="flex items-center gap-1 hover:text-primary transition-colors">
-                    Frete
-                    {sortConfig?.key === 'freightType' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                    ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                  </button>
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-dark-text-secondary">
-                  <button onClick={() => handleSort('insurance')} className="flex items-center gap-1 hover:text-primary transition-colors">
-                    Seguro
-                    {sortConfig?.key === 'insurance' ? (
                       sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                     ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
                   </button>
@@ -588,7 +564,7 @@ const Fechamento: React.FC = () => {
             <tbody>
               {sortedServices.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="text-center py-8 text-gray-500 dark:text-dark-text-secondary">
+                  <td colSpan={9} className="text-center py-8 text-gray-500 dark:text-dark-text-secondary">
                     Nenhum serviço encontrado para o período selecionado
                   </td>
                 </tr>
@@ -604,11 +580,8 @@ const Fechamento: React.FC = () => {
                     <td className="py-3 px-4 text-sm text-blue-600 dark:text-blue-400 font-medium">{service.client}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.requester}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.service}</td>
-                    <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.city}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.vehicle}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.driver}</td>
-                    <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.freightType}</td>
-                    <td className="py-3 px-4 text-sm text-gray-900 dark:text-dark-text">{service.insurance}</td>
                     <td className="py-3 px-4 text-sm text-right font-semibold text-gray-900 dark:text-dark-text">
                       {formatCurrency(service.value)}
                     </td>
@@ -619,7 +592,7 @@ const Fechamento: React.FC = () => {
             {sortedServices.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-bg-secondary">
-                  <td colSpan={11} className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-dark-text text-right">
+                  <td colSpan={8} className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-dark-text text-right">
                     TOTAL
                   </td>
                   <td className="py-3 px-4 text-sm text-right font-bold text-primary">
