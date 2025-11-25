@@ -70,7 +70,7 @@ const Fechamento: React.FC = () => {
   const [totalValue, setTotalValue] = useState(0);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [companyName, setCompanyName] = useState<string>('Empresa');
-  const [sortConfig, setSortConfig] = useState<{ key: keyof ServiceRecord; direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof ServiceRecord; direction: 'asc' | 'desc' } | null>({ key: 'date', direction: 'desc' });
 
   const fetchData = useCallback(async () => {
     if (!user?.companyId) return;
