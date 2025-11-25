@@ -156,11 +156,16 @@ const Fechamento: React.FC = () => {
   const handleExportPDF = async () => {
     try {
       // Buscar dados da empresa do usuário (transportadora)
-      const { data: userCompanyData } = await supabase
+      const { data: userCompanyData, error: companyError } = await supabase
         .from('companies')
         .select('name, document, address, phone, email')
         .eq('id', user?.companyId)
         .single();
+
+      console.log('🏢 Dados da empresa transportadora:');
+      console.log('  - user.companyId:', user?.companyId);
+      console.log('  - userCompanyData:', userCompanyData);
+      console.log('  - companyError:', companyError);
 
       // Buscar dados da empresa cliente (se filtro específico)
       let clientCompanyData = null;
@@ -218,7 +223,8 @@ const Fechamento: React.FC = () => {
       const rightX = pageWidth - 14;
 
       // Nome fantasia ou razão social da transportadora
-      const transportadoraNome = userCompanyData?.name || 'Transportadora';
+      const transportadoraNome = userCompanyData?.name || companyName || 'Transportadora';
+      console.log('📝 Nome da transportadora para PDF:', transportadoraNome);
       doc.text(transportadoraNome, rightX, yPos, { align: 'right' });
 
       yPos += 5;
@@ -227,25 +233,37 @@ const Fechamento: React.FC = () => {
 
       // CNPJ
       if (userCompanyData?.document) {
+        console.log('📝 CNPJ:', userCompanyData.document);
         doc.text(`CNPJ: ${userCompanyData.document}`, rightX, yPos, { align: 'right' });
         yPos += 4;
+      } else {
+        console.log('⚠️ CNPJ não encontrado');
       }
 
       // Endereço
       if (userCompanyData?.address) {
+        console.log('📝 Endereço:', userCompanyData.address);
         doc.text(userCompanyData.address, rightX, yPos, { align: 'right' });
         yPos += 4;
+      } else {
+        console.log('⚠️ Endereço não encontrado');
       }
 
       // Telefone
       if (userCompanyData?.phone) {
+        console.log('📝 Telefone:', userCompanyData.phone);
         doc.text(`Tel: ${userCompanyData.phone}`, rightX, yPos, { align: 'right' });
         yPos += 4;
+      } else {
+        console.log('⚠️ Telefone não encontrado');
       }
 
       // Email
       if (userCompanyData?.email) {
+        console.log('📝 Email:', userCompanyData.email);
         doc.text(userCompanyData.email, rightX, yPos, { align: 'right' });
+      } else {
+        console.log('⚠️ Email não encontrado');
       }
 
       // Prepare table data
