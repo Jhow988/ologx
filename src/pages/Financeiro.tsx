@@ -537,7 +537,7 @@ const Financeiro: React.FC = () => {
           {/* Filtros */}
           <div className="space-y-4 mb-6">
             {/* Linha 1: Busca, Período e Categoria */}
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr,1.5fr,1.5fr] gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Buscar por descrição
