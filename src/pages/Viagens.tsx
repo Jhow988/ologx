@@ -374,6 +374,15 @@ const Viagens: React.FC = () => {
       )
     },
     {
+      key: 'status',
+      header: 'Status',
+      render: (status: string) => (
+        <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getStatusColor(status)}`}>
+          {getStatusText(status)}
+        </span>
+      )
+    },
+    {
       key: 'vehicleType',
       header: 'Tipo Veículo',
       render: (vehicleType: string) => (
