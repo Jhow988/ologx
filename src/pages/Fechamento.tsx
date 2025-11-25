@@ -23,6 +23,7 @@ interface Trip {
   insurance_info: string | null;
   freight_value: number;
   status: string;
+  description: string | null;
 }
 
 interface Client {
@@ -125,7 +126,7 @@ const Fechamento: React.FC = () => {
           nf: trip.nf || '-',
           client: client?.name || '-',
           requester: trip.requester || '-',
-          service: `${trip.origin} → ${trip.destination}`,
+          service: trip.description || `${trip.origin} → ${trip.destination}`,
           city: client?.city || '-',
           vehicle: vehicle ? `${vehicle.plate}` : '-',
           driver: driver?.full_name || '-',
