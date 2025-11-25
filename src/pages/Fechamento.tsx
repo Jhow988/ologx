@@ -158,7 +158,7 @@ const Fechamento: React.FC = () => {
       // Buscar dados da empresa do usuário (transportadora)
       const { data: userCompanyData, error: companyError } = await supabase
         .from('companies')
-        .select('name, document, address, phone, email')
+        .select('name, cnpj, address, phone, email, city, state, zip_code')
         .eq('id', user?.companyId)
         .single();
 
@@ -232,9 +232,9 @@ const Fechamento: React.FC = () => {
       doc.setFontSize(8);
 
       // CNPJ
-      if (userCompanyData?.document) {
-        console.log('📝 CNPJ:', userCompanyData.document);
-        doc.text(`CNPJ: ${userCompanyData.document}`, rightX, yPos, { align: 'right' });
+      if (userCompanyData?.cnpj) {
+        console.log('📝 CNPJ:', userCompanyData.cnpj);
+        doc.text(`CNPJ: ${userCompanyData.cnpj}`, rightX, yPos, { align: 'right' });
         yPos += 4;
       } else {
         console.log('⚠️ CNPJ não encontrado');
