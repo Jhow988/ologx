@@ -336,11 +336,14 @@ const EditarServico: React.FC = () => {
             <p className="text-gray-600 dark:text-dark-text-secondary">Altere os dados do serviço</p>
           </div>
         </div>
-      </div>
-
-      {/* Version Banner */}
-      <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
-        ✅ Versão: 2025-11-25 v8.0 | Campos Obrigatórios: Data, Empresa e Descrição | Campo "Data de Término" removido
+        <div className="flex gap-4">
+          <Button type="button" variant="outline" onClick={() => navigate('/servicos')}>
+            Cancelar
+          </Button>
+          <Button type="submit" variant="primary" icon={Save} onClick={handleSubmit}>
+            Atualizar Serviço
+          </Button>
+        </div>
       </div>
 
       {/* Form */}
@@ -611,16 +614,6 @@ const EditarServico: React.FC = () => {
               </div>
             </div>
           </Card>
-        </div>
-
-        {/* Botões de Ação */}
-        <div className="flex justify-end gap-4 mt-6">
-          <Button type="button" variant="outline" onClick={() => navigate('/servicos')}>
-            Cancelar
-          </Button>
-          <Button type="submit" variant="primary" icon={Save}>
-            Atualizar Serviço
-          </Button>
         </div>
       </form>
     </div>
