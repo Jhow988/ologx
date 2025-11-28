@@ -360,6 +360,14 @@ const NovoServico: React.FC = () => {
             <p className="text-gray-600 dark:text-dark-text-secondary">Preencha os dados do serviço</p>
           </div>
         </div>
+        <div className="flex gap-4">
+          <Button type="button" variant="outline" onClick={() => navigate('/viagens')}>
+            Cancelar
+          </Button>
+          <Button type="submit" variant="primary" icon={Save} onClick={handleSubmit}>
+            Salvar Serviço
+          </Button>
+        </div>
       </div>
 
       {/* Form */}
@@ -627,16 +635,6 @@ const NovoServico: React.FC = () => {
               </div>
             </div>
           </Card>
-        </div>
-
-        {/* Botões de Ação */}
-        <div className="flex justify-end gap-4 mt-6">
-          <Button type="button" variant="outline" onClick={() => navigate('/viagens')}>
-            Cancelar
-          </Button>
-          <Button type="submit" variant="primary" icon={Save}>
-            Salvar Serviço
-          </Button>
         </div>
       </form>
     </div>
