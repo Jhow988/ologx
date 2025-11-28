@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +11,7 @@ import {
   Settings,
   UserPlus,
   Car,
+  ChevronDown,
   TrendingUp,
   TrendingDown,
   Tags,
@@ -81,12 +82,14 @@ const menuItems = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
   const handleMenuClick = (item: typeof menuItems[0]) => {
     if (item.submenu && item.submenu.length > 0) {
+      // Abre o submenu
+      setOpenSubmenu(openSubmenu === item.path ? null : item.path);
       // Navega para o primeiro item do submenu
       navigate(item.submenu[0].path);
-      onClose();
     }
   };
 
@@ -125,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               {item.submenu ? (
                 <Can perform={item.submenu.map(s => s.permission).join('|')}>
                   <button
-                    onClick={() => handleMenuClick(item)}
+                    onClick={() => isOpen && handleMenuClick(item)}
                     className={`w-full flex items-center rounded-lg transition-colors text-white/80 dark:text-dark-text-secondary hover:bg-primary-dark dark:hover:bg-dark-border hover:text-white dark:hover:text-dark-text focus:outline-none ${
                       isOpen ? 'justify-between gap-3 px-3 py-2.5 text-sm font-medium' : 'justify-center p-2.5'
                     }`}
@@ -135,7 +138,46 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       <item.icon className="h-5 w-5 flex-shrink-0" />
                       {isOpen && <span>{item.label}</span>}
                     </div>
+                    {isOpen && (
+                      <ChevronDown
+                        className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
+                          openSubmenu === item.path ? 'rotate-180' : ''
+                        }`}
+                      />
+                    )}
                   </button>
+                  <AnimatePresence>
+                    {isOpen && openSubmenu === item.path && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className="overflow-hidden ml-3"
+                      >
+                        <div className="pt-1 pb-1 space-y-0.5">
+                          {item.submenu.map((subItem) => (
+                            <Can perform={subItem.permission} key={subItem.path}>
+                              <NavLink
+                                to={subItem.path}
+                                onClick={onClose}
+                                className={({ isActive }) =>
+                                  `flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
+                                    isActive
+                                      ? 'bg-accent text-white'
+                                      : 'text-white/70 dark:text-dark-text-secondary hover:bg-primary-dark dark:hover:bg-dark-border hover:text-white dark:hover:text-dark-text'
+                                  }`
+                                }
+                              >
+                                <subItem.icon className="h-4 w-4" />
+                                {subItem.label}
+                              </NavLink>
+                            </Can>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </Can>
               ) : (
                 <Can perform={item.permission}>
