@@ -372,10 +372,6 @@ const NovoServico: React.FC = () => {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        {/* INDICADOR DE VERSÃO - CACHE BUSTER */}
-        <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400">
-          ✅ Versão: 2025-11-25 v7.0 | Campos Obrigatórios: Data, Empresa e Descrição | Veículo/Motorista: Usa primeiro disponível se não selecionado
-        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* COLUNA 1 - Informações Básicas */}
           <Card>
