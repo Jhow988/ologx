@@ -336,7 +336,7 @@ const NovoServico: React.FC = () => {
       freight_type: formData.freightType || null,
       insurance_info: formData.insuranceInfo || null,
       description: formData.description,
-      status: 'scheduled',
+      status: 'completed',
       distance: formData.distance || 0,
       attachments: attachmentsToSave,
       service_number: serviceNumber,
